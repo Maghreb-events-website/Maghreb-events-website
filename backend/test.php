@@ -130,7 +130,7 @@ if ($action === 'gen_token') {
         $token   = "$header.$body.$sig";
         $userJson = json_encode(['id'=>$admin['id'],'cid'=>$admin['cid'],'name'=>$admin['name'],'email'=>$admin['email'],'role'=>$admin['role']]);
         echo "<h3>Bypass Token for CID $cid</h3>
-        <p style='color:#facc15;font-size:13px'>Run this in your browser console on the jamie-datson.com domain, then go to admin.html:</p>
+        <p style='color:#facc15;font-size:13px'>Run this in your browser console on the jamie-datson.com domain, then go to /admin:</p>
         <textarea style='width:100%;height:80px;background:#1f1f1f;color:#4ade80;border:1px solid #333;border-radius:6px;padding:8px;font-family:monospace;font-size:11px;word-break:break-all' onclick='this.select()'>localStorage.setItem(\"me_token\",\"$token\"); localStorage.setItem(\"me_user\",'" . addslashes($userJson) . "');</textarea>
         <p style='font-size:12px;color:#6b7280'>Token expires in 8 hours. Secret used: <code>" . ($usingDefaultSecret ? 'DEFAULT (mismatch risk!)' : 'custom ✓') . "</code></p>";
     } else { echo "<div class='msg err'>CID $cid not found in admins table.</div>"; }

@@ -22,17 +22,8 @@ class Router {
         $path   = parse_url($uri, PHP_URL_PATH);
         $path   = rtrim($path, '/') ?: '/';
 
-        // If the rewrite sent us to index.php but the real path is in REQUEST_URI, use that
-        if ($path === '/index.php' || $path === '') {
-            $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-            $path = rtrim($path, '/') ?: '/';
-        }
-
-        // Strip base prefix if running in subdir
-        $base = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-        if ($base && str_starts_with($path, $base)) {
-            $path = substr($path, strlen($base));
-        }
+        // Strip /index.php prefix however it appears in the path
+        $path = preg_replace('#^/index\.php#', '', $path);
         $path = $path ?: '/';
 
         foreach ($this->routes as $route) {

@@ -57,7 +57,7 @@ body{background:#0f1418;color:#dee3e9;font-family:'Inter',sans-serif;min-height:
 @keyframes me-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .me-spin{animation:me-spin .8s linear infinite;display:inline-block}
 </style>
-<link rel="stylesheet" href="assets/site.css"/>
+<link rel="stylesheet" href="/assets/site.css"/>
 </head>
 <body class="me-page" data-active-nav="">
 <div id="toast"></div>
@@ -88,7 +88,7 @@ body{background:#0f1418;color:#dee3e9;font-family:'Inter',sans-serif;min-height:
   <div class="me-modal" id="modal-inner" style="max-width:480px"></div>
 </div>
 
-<script src="assets/site.js"></script>
+<script src="/assets/site.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
 //  AUTH GUARD — server-verified, fixes stale localStorage sessions
@@ -97,7 +97,7 @@ let ME_USER = null;
 
 (async () => {
   const tok = ME.auth.token();
-  if (!tok) { window.location.href = 'login.html'; return; }
+  if (!tok) { window.location.href = '/login'; return; }
 
   try {
     const res = await fetch(ME.API + '/auth/me', {
@@ -117,7 +117,7 @@ let ME_USER = null;
     const cid = String((user && user.cid) || '');
     const cidAllowed = Array.isArray(ME.ADMIN_CIDS) && ME.ADMIN_CIDS.includes(cid);
     if (!user || ((user.role !== 'admin' && user.role !== 'superadmin') && !cidAllowed)) {
-      window.location.href = 'index.html';
+      window.location.href = '/';
       return;
     }
 
@@ -142,7 +142,7 @@ let ME_USER = null;
       document.getElementById('role-badge').textContent = ME_USER.role;
       loadTab('partners');
     } else {
-      window.location.href = 'login.html';
+      window.location.href = '/login';
     }
   }
 })();
@@ -349,8 +349,8 @@ function makePeoplePanel(endpoint, label, singularLabel) {
 
       listEl.innerHTML = rows.map(p => `
         <div class="me-row">
-          <img class="thumb" src="${p.photo_url || 'assets/avatar-placeholder.svg'}" alt=""
-               onerror="this.src='assets/avatar-placeholder.svg'"/>
+          <img class="thumb" src="${p.photo_url || '/assets/avatar-placeholder.svg'}" alt=""
+               onerror="this.src='/assets/avatar-placeholder.svg'"/>
           <div>
             <div style="color:var(--me-fg);font-weight:500">${escHtml(p.name)}</div>
             <div style="color:var(--me-fg-dim);font-size:12px">
@@ -467,7 +467,7 @@ PANELS.partners = async function () {
 
     listEl.innerHTML = rows.map(p => `
       <div class="me-row">
-        <img class="thumb" src="${p.logo_url || 'assets/avatar-placeholder.svg'}" alt=""/>
+        <img class="thumb" src="${p.logo_url || '/assets/avatar-placeholder.svg'}" alt=""/>
         <div>
           <div style="color:var(--me-fg);font-weight:500">${escHtml(p.name)}</div>
           <div style="color:var(--me-fg-dim);font-size:12px">
@@ -555,7 +555,7 @@ PANELS.airlines = async function () {
 
     listEl.innerHTML = rows.map(a => `
       <div class="me-row">
-        <img class="thumb" src="${a.logo_url || 'assets/avatar-placeholder.svg'}" alt=""/>
+        <img class="thumb" src="${a.logo_url || '/assets/avatar-placeholder.svg'}" alt=""/>
         <div>
           <div style="color:var(--me-fg);font-weight:500">${escHtml(a.name)}</div>
           <div style="color:var(--me-fg-dim);font-size:12px;font-family:monospace">

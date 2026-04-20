@@ -37,7 +37,7 @@
   body { background-color:#0f1418; color:#dee3e9; font-family:'Inter',sans-serif; min-height:max(884px,100dvh); }
   @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 </style>
-<link rel="stylesheet" href="assets/site.css"/>
+<link rel="stylesheet" href="/assets/site.css"/>
 </head>
 <body class="min-h-screen flex flex-col" data-active-nav="planning">
 
@@ -148,7 +148,7 @@
   </div>
 </footer>
 
-<script src="assets/site.js"></script>
+<script src="/assets/site.js"></script>
 <script>
 (async () => {
   const loading = document.getElementById('team-loading');
@@ -163,7 +163,7 @@
   function card(p) {
     return `
       <article class="me-card">
-        <img class="me-card-avatar" src="${p.photo_url || 'assets/avatar-placeholder.svg'}" alt="${p.name}" onerror="this.src='assets/avatar-placeholder.svg'"/>
+        <img class="me-card-avatar" src="${p.photo_url || '/assets/avatar-placeholder.svg'}" alt="${p.name}" onerror="this.src='/assets/avatar-placeholder.svg'"/>
         <h3 class="text-center" style="font-size:17px">${p.name}</h3>
         <div style="display:flex;align-items:center;justify-content:center">
           <span class="me-pill">${p.role || 'Planner'}</span>

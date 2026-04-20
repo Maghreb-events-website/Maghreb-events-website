@@ -15,7 +15,7 @@ function body(): array {
     if (empty($raw)) return [];
 
     // Accept both application/json and text/plain (the latter is used by
-    // callback.html to avoid CORS preflight on the OAuth code exchange).
+    // /callback to avoid CORS preflight on the OAuth code exchange).
     $data = json_decode($raw, true);
     if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
         return $data;

@@ -50,7 +50,7 @@ function register_auth_routes(Router $router): void {
     //   VATSIM_CLIENT_ID      — from auth-dev.vatsim.net
     //   VATSIM_CLIENT_SECRET  — from auth-dev.vatsim.net
     //   VATSIM_REDIRECT_URI   — must match the one registered on auth-dev.vatsim.net
-    //                           and the one used in login.html
+    //                           and the one used in /login
     $router->post('/api/auth/vatsim/callback', function() {
         // Top-level try/catch so any unexpected exception returns structured JSON
         // instead of a bare 500. The 'detail' field tells you exactly what failed.
@@ -62,7 +62,7 @@ function register_auth_routes(Router $router): void {
         // ── Read config (from vatsim_config.php or env fallback) ────────
         $clientId     = defined('VATSIM_CLIENT_ID')     ? VATSIM_CLIENT_ID     : (getenv('VATSIM_CLIENT_ID')     ?: 'YOUR_SANDBOX_CLIENT_ID');
         $clientSecret = defined('VATSIM_CLIENT_SECRET') ? VATSIM_CLIENT_SECRET : (getenv('VATSIM_CLIENT_SECRET') ?: 'YOUR_SANDBOX_CLIENT_SECRET');
-        $redirectUri  = defined('VATSIM_REDIRECT_URI')  ? VATSIM_REDIRECT_URI  : (getenv('VATSIM_REDIRECT_URI')  ?: 'https://jamie-datson.com/callback.html');
+        $redirectUri  = defined('VATSIM_REDIRECT_URI')  ? VATSIM_REDIRECT_URI  : (getenv('VATSIM_REDIRECT_URI')  ?: 'https://jamie-datson.com/callback');
         // Use VATSIM_SANDBOX=true in vatsim_config.php to target auth-dev.vatsim.net during development.
         $sandboxMode  = defined('VATSIM_SANDBOX') ? (bool)VATSIM_SANDBOX : false;
         $sandboxBase  = $sandboxMode ? 'https://auth-dev.vatsim.net' : 'https://auth.vatsim.net';

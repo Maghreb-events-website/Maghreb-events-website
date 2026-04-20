@@ -1,7 +1,4 @@
-<a class="text-[#bec8d2] font-['Inter'] text-xs hover:text-[#dee3e9] transition-all" href="https://cdn.vatsim.net/policy-documents/Privacy%20Policy%20v1.4.pdf">Privacy Policy</a>
-<a class="text-[#bec8d2] font-['Inter'] text-xs hover:text-[#dee3e9] transition-all" href="https://cdn.vatsim.net/policy-documents/User%20Agreement%20v1.4.pdf">Terms of Service</a>
-<a class="text-[#bec8d2] font-['Inter'] text-xs hover:text-[#dee3e9] transition-all" href="https://discord.gg/QacfPpC4">Contact</a>
-<a class="text-[#89ceff] font-['Inter'] text-xs underline" href="https://vatsim.net" target="_blank">VATSIM.net</a><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -31,15 +28,15 @@
   body { background-color:#0f1418; color:#dee3e9; font-family:'Inter',sans-serif; min-height:100vh; }
   @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 </style>
-<link rel="stylesheet" href="assets/site.css"/>
+<link rel="stylesheet" href="/assets/site.css"/>
 </head>
 <body class="me-page" data-active-nav="" data-no-nav>
 
 <main class="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-6 py-12">
   <div class="w-full max-w-md text-center">
 
-    <a href="index.html" class="inline-block mb-8">
-      <img data-me-logo src="assets/img/Maghreb_vACC_Full_white_trans_1.png"
+    <a href="/" class="inline-block mb-8">
+      <img data-me-logo src="/assets/img/Maghreb_vACC_Full_white_trans_1.png"
            alt="Maghreb vACC" class="h-20 w-auto mx-auto object-contain"/>
     </a>
 
@@ -66,13 +63,13 @@
   </div>
 </main>
 
-<script src="assets/site.js"></script>
+<script src="/assets/site.js"></script>
 <script>
 (async () => {
   if (ME.auth.token()) {
     const u = await ME.auth.syncUser();
-    if (u && ME.auth.isAdmin()) window.location.replace('admin.html');
-    else if (u) window.location.replace('index.html');
+    if (u && ME.auth.isAdmin()) window.location.replace('/admin');
+    else if (u) window.location.replace('/');
   }
 
   ME.theme.set(ME.theme.get());

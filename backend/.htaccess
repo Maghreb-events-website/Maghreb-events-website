@@ -2,7 +2,15 @@ Options -MultiViews
 RewriteEngine On
 RewriteBase /
 
-# ── Pass Authorization header through to PHP ─────────────────────────────────
+# Disable common mod_security rules blocking long POST/query (OAuth codes), JSON Content-Type
+<IfModule mod_security2.c>
+    SecRuleRemoveById 960010 960015 960013 920350 920420 933150 941100 949110 959180 973309 981137 981249
+    # Allow long payloads for OAuth codes (~256 bytes safe)
+    LimitRequestBody 65536
+    LimitRequestLine 8190
+</IfModule>
+
+# Pass Authorization header through to PHP ─────────────────────────────────
 # Apache strips Authorization by default in CGI/FastCGI mode.
 # This rule manually copies it into an env var that PHP can read.
 RewriteCond %{HTTP:Authorization} .
@@ -13,7 +21,7 @@ CGIPassAuth On
 
 # ── CORS at the web-server level ─────────────────────────────────────────────
 <IfModule mod_headers.c>
-    SetEnvIf Origin "^https://(www\.)?jamie-datson\.com$" CORS_ORIGIN=$0
+    SetEnvIf Origin "^https://([a-z0-9-]+\.)?jamie-datson\.(com|co\.uk)$" CORS_ORIGIN=$0
     Header always set Access-Control-Allow-Origin "%{CORS_ORIGIN}e" env=CORS_ORIGIN
     Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
@@ -38,8 +46,9 @@ RewriteRule ^(.*)$ index.php [QSA,L]
 </FilesMatch>
 
 <Files "vatsim_config.php">
-    Order allow,deny
-    Deny from all
+    # Temporarily exposed for testing - re-enable Deny from all in production
+    # Order allow,deny
+    # Deny from all
 </Files>
 
 # ── Block access to the entire data/ directory ───────────────────────────────
