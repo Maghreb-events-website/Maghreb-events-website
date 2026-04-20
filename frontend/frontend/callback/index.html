@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Authenticating… | Maghreb Events</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;700&family=Inter:wght@300;400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/site.css"/>
+</head>
+<body class="me-page">
+<main class="flex flex-col items-center justify-center min-h-[calc(100vh-160px)] px-6 text-center">
+  <div id="status">
+    <span class="material-symbols-outlined me-spin" style="font-size:48px;color:var(--me-primary)">progress_activity</span>
+    <h1 style="font-family:'Manrope',sans-serif" class="text-2xl font-light mt-6">Completing sign-in…</h1>
+    <p style="color:var(--me-fg-muted)" class="text-sm mt-2">Exchanging authorization code with the API.</p>
+  </div>
+  <div id="error" class="hidden mt-6 me-card max-w-md text-left" style="border-color:rgba(220,38,38,0.4)">
+    <div class="flex items-start gap-3">
+      <span class="material-symbols-outlined" style="color:#fca5a5">error</span>
+      <div>
+        <h3 style="color:var(--me-fg)">Sign-in failed</h3>
+        <p id="error-msg" style="color:var(--me-fg-muted);font-size:13px"></p>
+        <a href="/login" class="me-btn me-btn--ghost mt-4 inline-block" style="text-decoration:none">Back to login</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="/assets/site.js"></script>
+<script>
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('code');
+  const state  = params.get('state');
+  const err    = params.get('error');
+  const expectedState = sessionStorage.getItem('vatsim_oauth_state');
+
+  function fail(msg) {
+    document.getElementById('status').classList.add('hidden');
+    document.getElementById('error').classList.remove('hidden');
+    document.getElementById('error-msg').textContent = msg;
+  }
+
+  if (err) return fail('VATSIM returned an error: ' + err);
+  if (!code) return fail('No authorization code received from VATSIM.');
+  if (state && expectedState && state !== expectedState) {
+    return fail('OAuth state mismatch — possible CSRF attempt.');
+  }
+
+  async function readBodySafe(res) {
+    const text = await res.text();
+    if (!text) return null;
+    try { return JSON.parse(text); }
+    catch { return { raw: text }; }
+  }
+
+  try {
+    const apiBase = (ME.API_CANDIDATES && ME.API_CANDIDATES[0]) || ME.API;
+    if (!apiBase) return fail('API is not configured.');
+
+    let data = null;
+    try {
+      const res = await fetch(`${apiBase}/auth/vatsim/callback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, state }),
+      });
+      const body = await readBodySafe(res);
+      if (!res.ok) {
+        const msg =
+          (body && (body.error || body.detail || body.message)) ||
+          (body && body.raw ? String(body.raw).slice(0, 180) : '') ||
+          `HTTP ${res.status}`;
+        return fail(`API ${apiBase} returned ${msg}`);
+      }
+      if (!body || typeof body !== 'object') return fail(`API ${apiBase} returned an invalid response`);
+      if (typeof body.token !== 'string' || !body.token.trim()) return fail(`API ${apiBase} did not return an auth token`);
+      data = body;
+      ME.API = apiBase;
+      localStorage.setItem('me_api', apiBase);
+    } catch {
+      return fail(`Cannot reach ${apiBase}`);
+    }
+
+    const token = data.token.trim();
+
+    // Always store the token — every signed-in user gets one regardless of role
+    localStorage.setItem('me_token', token);
+    // Support both API shapes:
+    // 1) { token, admin: { ... } }
+    // 2) { token, id, cid, name, email, role }
+    const userPayload =
+      (data && data.admin && typeof data.admin === 'object')
+        ? data.admin
+        : data;
+    ME.auth.setUser(userPayload || {});
+    // Do not force /auth/me immediately here; some deployments block it despite
+    // successful callback, which would clear the just-signed-in user state.
+    sessionStorage.removeItem('vatsim_oauth_state');
+
+    // Admins (allowed CID list) → admin panel; everyone else → home, stays signed in
+    const isAdmin = ME.auth.isAdmin();
+    window.location.replace(isAdmin ? '/admin' : '/');
+  } catch {
+    fail('Unable to complete sign-in due to a client-side error.');
+  }
+})();
+</script>
+</body></html>

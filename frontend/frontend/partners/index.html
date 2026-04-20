@@ -98,10 +98,6 @@
   <link rel="stylesheet" href="/assets/site.css"/>
 </head>
 <body class="min-h-screen flex flex-col" data-active-nav="partners">
-<!-- Test Mode Banner -->
-<div id="tm-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#92400e;color:#fef3c7;text-align:center;padding:8px 16px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #b45309">
-  <span style="margin-right:8px">⚠</span>TEST MODE — This data is not live. For testing purposes only.<span style="margin-left:8px">⚠</span>
-</div>
 <!-- TopAppBar -->
 
 <!-- Main Canvas -->
@@ -217,117 +213,52 @@
 
 <script src="/assets/site.js"></script>
 <script>
-/* ── Test-mode modal/toast helpers ──────────────────────────────────────── */
-function tmModal(title, fields, onSave) {
-  document.getElementById('tm-modal-bd')?.remove();
-  const bd = document.createElement('div');
-  bd.id = 'tm-modal-bd';
-  bd.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px';
-  const rows = fields.map(f => {
-    if (f.type === 'textarea') return `<div style="display:flex;flex-direction:column;gap:4px"><label style="font-size:12px;color:#9ca3af">${f.label}</label><textarea name="${f.name}" rows="3" style="background:#1a2025;border:1px solid #374151;border-radius:6px;padding:8px 10px;color:#dee3e9;font-size:13px;resize:vertical;width:100%;box-sizing:border-box"></textarea></div>`;
-    if (f.type === 'select') return `<div style="display:flex;flex-direction:column;gap:4px"><label style="font-size:12px;color:#9ca3af">${f.label}</label><select name="${f.name}" style="background:#1a2025;border:1px solid #374151;border-radius:6px;padding:8px 10px;color:#dee3e9;font-size:13px;width:100%">${f.options.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>`;
-    return `<div style="display:flex;flex-direction:column;gap:4px"><label style="font-size:12px;color:#9ca3af">${f.label}</label><input type="${f.type||'text'}" name="${f.name}" ${f.required?'required':''} style="background:#1a2025;border:1px solid #374151;border-radius:6px;padding:8px 10px;color:#dee3e9;font-size:13px;width:100%;box-sizing:border-box"/></div>`;
-  }).join('');
-  bd.innerHTML = `<div style="background:#111820;border:1px solid #374151;border-radius:12px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <h3 style="margin:0;font-size:16px;font-weight:600;color:#dee3e9">${title}</h3>
-      <button id="tm-mc" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:22px;line-height:1;padding:0">×</button>
-    </div>
-    <form id="tm-mf" style="display:flex;flex-direction:column;gap:14px">
-      ${rows}
-      <p id="tm-me" style="color:#f87171;font-size:12px;margin:0;display:none"></p>
-      <div style="display:flex;gap:10px;margin-top:4px">
-        <button type="submit" id="tm-ms" style="flex:1;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer">Save</button>
-        <button type="button" id="tm-mcc" style="flex:1;background:#1a2025;color:#9ca3af;border:1px solid #374151;border-radius:8px;padding:10px;font-size:13px;cursor:pointer">Cancel</button>
-      </div>
-    </form>
-  </div>`;
-  document.body.appendChild(bd);
-  const close = () => bd.remove();
-  bd.querySelector('#tm-mc').onclick = close;
-  bd.querySelector('#tm-mcc').onclick = close;
-  bd.addEventListener('click', e => { if (e.target === bd) close(); });
-  bd.querySelector('#tm-mf').onsubmit = async e => {
-    e.preventDefault();
-    const btn = bd.querySelector('#tm-ms'), errEl = bd.querySelector('#tm-me');
-    btn.disabled = true; btn.textContent = 'Saving…'; errEl.style.display = 'none';
-    try { await onSave(Object.fromEntries(new FormData(e.target).entries())); close(); }
-    catch(err) { btn.disabled = false; btn.textContent = 'Save'; errEl.textContent = err.message; errEl.style.display = 'block'; }
-  };
-}
-function tmToast(msg) {
-  const t = Object.assign(document.createElement('div'), {textContent: msg});
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;padding:8px 20px;border-radius:8px;font-size:13px;z-index:10001;pointer-events:none;white-space:nowrap';
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2400);
-}
-function tmApi(path, method, body) {
-  return fetch(ME.API + path, {
-    method, headers: {'Content-Type':'application/json'},
-    body: body ? JSON.stringify(body) : undefined
-  }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.message || r.statusText); return j; });
-}
-function tmFab(label, onClick) {
-  const b = document.createElement('button');
-  b.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;vertical-align:-3px">add</span> ' + label;
-  b.style.cssText = 'position:fixed;bottom:28px;right:24px;z-index:9998;background:#2563eb;color:#fff;border:none;border-radius:999px;padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 24px rgba(0,0,0,.5)';
-  b.onclick = onClick;
-  document.body.appendChild(b);
-}
+
 (async () => {
   const grid = document.getElementById('partner-grid');
-
-  let testMode = false;
-  try { const r = await fetch(ME.API+'/settings/test-mode'); if(r.ok){const j=await r.json();testMode=!!j.test_mode;} } catch(e){}
-  if (testMode) { document.getElementById('tm-banner').style.display='block'; document.body.style.paddingTop='38px'; }
-
-  const EP = testMode ? '/test-partners' : '/partners';
-
   function statusPill(s) {
-    const cls = s==='verified'?'bg-[#89ceff]/10 text-[#89ceff]':s==='pending'?'bg-[#ffb86e]/10 text-[#ffb86e]':s==='suspended'?'bg-red-500/10 text-red-400':'bg-[#30353a] text-[#bec8d2]';
+    const cls = s === 'verified'  ? 'bg-[#89ceff]/10 text-[#89ceff]'
+              : s === 'pending'   ? 'bg-[#ffb86e]/10 text-[#ffb86e]'
+              : s === 'suspended' ? 'bg-red-500/10 text-red-400'
+              :                      'bg-[#30353a] text-[#bec8d2]';
     return `<span class="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full ${cls}">${s}</span>`;
   }
   function card(p) {
     const inner = `
-      <div style="height:120px;display:flex;align-items:center;justify-content:center;background:var(--me-bg-elev-2);border-radius:8px;overflow:hidden;margin-bottom:8px">
-        ${p.logo_url?`<img src="${p.logo_url}" alt="${p.name}" style="max-width:80%;max-height:80%;object-fit:contain"/>`:`<span class="material-symbols-outlined" style="font-size:42px;color:var(--me-fg-dim)">corporate_fare</span>`}
+      <div class="me-card-img-wrap" style="height:120px;display:flex;align-items:center;justify-content:center;background:var(--me-bg-elev-2);border-radius:8px;overflow:hidden;margin-bottom:8px">
+        ${p.logo_url
+          ? `<img src="${p.logo_url}" alt="${p.name}" style="max-width:80%;max-height:80%;object-fit:contain"/>`
+          : `<span class="material-symbols-outlined" style="font-size:42px;color:var(--me-fg-dim)">corporate_fare</span>`}
       </div>
-      <div class="flex items-center justify-between gap-2"><h3 style="font-size:16px;margin:0">${p.name}</h3>${statusPill(p.status)}</div>
-      <p style="font-size:11px;color:var(--me-fg-dim);text-transform:uppercase;letter-spacing:0.08em;margin:0">${p.type||''}</p>
-      ${p.description?`<p style="font-size:13px;margin:8px 0 0">${p.description}</p>`:''}`;
+      <div class="flex items-center justify-between gap-2">
+        <h3 style="font-size:16px;margin:0">${p.name}</h3>
+        ${statusPill(p.status)}
+      </div>
+      <p style="font-size:11px;color:var(--me-fg-dim);text-transform:uppercase;letter-spacing:0.08em;margin:0">${p.type || ''}</p>
+      ${p.description ? `<p>${p.description}</p>` : ''}
+    `;
     return p.website
-      ? `<a href="${p.website}" target="_blank" rel="noopener" class="me-card" style="text-decoration:none;color:inherit">${inner}</a>`
+      ? `<a href="${p.website}" target="_blank" rel="noopener" class="me-card" style="text-decoration:none;color:inherit;cursor:pointer">${inner}</a>`
       : `<article class="me-card">${inner}</article>`;
   }
-
-  async function render() {
-    try {
-      const json = await (await fetch(ME.API+EP)).json();
-      const items = json.data||[];
-      grid.innerHTML = items.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${items.map(card).join('')}</div>` : '<p style="color:var(--me-fg-muted)">No partners listed yet.</p>';
-    } catch(err) {
-      grid.innerHTML = `<p style="color:#f87171">Unable to load: ${err.message}</p>`;
-    }
-  }
-  render();
-
-  if (testMode) {
-    const FIELDS = [
-      {name:'name',          label:'Name *',        required:true},
-      {name:'type',          label:'Type *',        required:true},
-      {name:'status',        label:'Status',        type:'select', options:['pending','verified','suspended','inactive']},
-      {name:'website',       label:'Website URL'},
-      {name:'logo_url',      label:'Logo URL'},
-      {name:'description',   label:'Description',   type:'textarea'},
-      {name:'contact_email', label:'Contact Email', type:'email'},
-    ];
-    tmFab('Add Test Partner', () => tmModal('Add Test Partner', FIELDS, async body => {
-      await tmApi(EP, 'POST', body); tmToast('Partner added'); render();
-    }));
+  try {
+    const res = await fetch(`${ME.API}/partners`);
+    const json = await res.json();
+    const items = json.data || [];
+    if (!items.length) { grid.innerHTML = '<p style="color:var(--me-fg-muted)">No partners listed yet.</p>'; return; }
+    grid.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${items.map(card).join('')}</div>`;
+  } catch (err) {
+    console.error('Partners API error:', err);
+    grid.innerHTML = `<div style="padding:16px;border:1px solid rgba(239,68,68,0.3);border-radius:8px;background:rgba(239,68,68,0.05)">
+      <p style="color:#f87171;font-weight:600;margin:0 0 4px">Unable to reach the API</p>
+      <p style="color:var(--me-fg-muted);font-size:12px;margin:0">${err.message} — Check that webapi.jamie-datson.com is running and CORS is configured correctly.</p>
+    </div>`;
   }
 })();
 
-document.getElementById('contact-btn')?.addEventListener('click', () => window.open('https://discord.gg/QacfPpC4','_blank'));
+document.getElementById('contact-btn')?.addEventListener('click', () => {
+  window.open('https://discord.gg/QacfPpC4', '_blank');
+});
 
 </script>
 </body></html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sign In | Maghreb Events</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "on-surface": "#dee3e9", "surface": "#0f1418",
+          "surface-container-low": "#171c20", "surface-container": "#1b2024",
+          "outline-variant": "#3e4850", "outline": "#88929b",
+          "on-surface-variant": "#bec8d2", "primary": "#0ea5e9",
+          "on-primary": "#00344d", "surface-container-high": "#252b2f"
+        },
+        fontFamily: { "headline": ["Manrope"], "body": ["Inter"] }
+      }
+    }
+  }
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  body { background-color:#0f1418; color:#dee3e9; font-family:'Inter',sans-serif; min-height:100vh; }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+</style>
+<link rel="stylesheet" href="/assets/site.css"/>
+</head>
+<body class="me-page" data-active-nav="" data-no-nav>
+
+<main class="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-6 py-12">
+  <div class="w-full max-w-md text-center">
+
+    <a href="/" class="inline-block mb-8">
+      <img data-me-logo src="/assets/img/Maghreb_vACC_Full_white_trans_1.png"
+           alt="Maghreb vACC" class="h-20 w-auto mx-auto object-contain"/>
+    </a>
+
+    <h1 style="font-family:'Manrope',sans-serif" class="text-3xl font-light tracking-tight mb-2 text-on-surface">
+      Management Portal
+    </h1>
+    <p style="color:var(--me-fg-muted)" class="text-sm mb-10">
+      Sign in to access the Maghreb Events admin panel.
+    </p>
+
+    <div class="me-card" style="padding:32px;text-align:left">
+      <button id="vatsim-btn" class="me-btn w-full" style="height:52px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;width:100%">
+        <span class="material-symbols-outlined" style="font-size:20px">login</span>
+        <span>Continue with VATSIM</span>
+      </button>
+      <p style="color:var(--me-fg-dim);font-size:11px;line-height:1.6;margin-top:8px;text-align:center">
+        Redirects to VATSIM Connect to authorize Maghreb Events.
+      </p>
+    </div>
+
+      <p class="font-['Inter'] text-xs leading-relaxed text-[#bec8d2]">© 2026 Maghreb Events. VATSIM Middle East &amp; North Africa.</p>
+    </p>
+  </div>
+</main>
+
+<script src="/assets/site.js"></script>
+<script>
+(async () => {
+  if (ME.auth.token()) {
+    const u = await ME.auth.syncUser();
+    if (u && ME.auth.isAdmin()) window.location.replace('/admin');
+    else if (u) window.location.replace('/');
+  }
+
+  ME.theme.set(ME.theme.get());
+
+  document.getElementById('vatsim-btn').addEventListener('click', () => {
+    const btn = document.getElementById('vatsim-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined me-spin">progress_activity</span><span>Redirecting to VATSIM...</span>';
+    ME.auth.startVatsimOAuth();
+  });
+})();
+</script>
+</body></html>
