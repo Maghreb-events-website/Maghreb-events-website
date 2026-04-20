@@ -236,7 +236,8 @@ const TABS = [
   { key: 'hitsquad', label: 'Hitsquad',       icon: 'emergency' },
   { key: 'briefing', label: 'Pilot Briefing', icon: 'description' },
   { key: 'events',   label: 'Events',         icon: 'event' },
-  { key: 'allowedcids', label: 'Allowed CIDs', icon: 'verified_user' },
+  { key: 'allowedcids',  label: 'Allowed CIDs',  icon: 'verified_user' },
+  { key: 'announcement', label: 'Announcement',   icon: 'campaign' },
   { key: 'admins',   label: 'Admins',         icon: 'admin_panel_settings', superOnly: true },
 ];
 
@@ -1000,6 +1001,288 @@ PANELS.allowedcids = async function () {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
+// ── ANNOUNCEMENT ──────────────────────────────────────────────────────────────────────────────────────────────
+PANELS.announcement = function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = `
+    <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--me-border)">
+      <h2 style="font-family:'Manrope',sans-serif;font-size:22px;font-weight:300;display:flex;align-items:center;gap:10px">
+        <span class="material-symbols-outlined" style="color:var(--me-primary);font-size:24px">campaign</span>
+        Send Announcement
+      </h2>
+      <p style="color:var(--me-fg-muted);font-size:13px;margin-top:6px">
+        Compose a Discord embed. The preview on the right updates live as you type.
+        Click <strong style="color:var(--me-fg)">Send Announcement</strong> to publish it through the bot.
+      </p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start">
+
+      <!-- LEFT: form -->
+      <div>
+        <form id="ann-form" class="space-y-4" novalidate>
+
+          <div>
+            <label class="me-label">Channel *</label>
+            <select class="me-input" id="ann-channel" name="channel">
+              <option value="event">Event Channel</option>
+              <option value="announcement">Announcement Channel</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="me-label">Title *</label>
+            <input class="me-input" id="ann-title" name="title" required maxlength="256"
+                   placeholder="e.g. New Year's Morocco — Registration Open!"/>
+          </div>
+
+          <div>
+            <label class="me-label">Description — paragraph 1 *</label>
+            <textarea class="me-input" id="ann-desc" name="description" required rows="3" maxlength="2048"
+                      placeholder="Main body of the announcement…"></textarea>
+          </div>
+
+          <div>
+            <label class="me-label">Paragraph 2
+              <span style="color:var(--me-fg-muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>
+            </label>
+            <textarea class="me-input" id="ann-para2" name="para2" rows="2" maxlength="1024"
+                      placeholder="Additional info…"></textarea>
+          </div>
+
+          <div>
+            <label class="me-label">Paragraph 3
+              <span style="color:var(--me-fg-muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>
+            </label>
+            <textarea class="me-input" id="ann-para3" name="para3" rows="2" maxlength="1024"
+                      placeholder="More details…"></textarea>
+          </div>
+
+          <div>
+            <label class="me-label">Paragraph 4
+              <span style="color:var(--me-fg-muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>
+            </label>
+            <textarea class="me-input" id="ann-para4" name="para4" rows="2" maxlength="1024"
+                      placeholder="Final notes…"></textarea>
+          </div>
+
+          <div>
+            <label class="me-label">Image URL
+              <span style="color:var(--me-fg-muted);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span>
+            </label>
+            <input class="me-input" id="ann-image" name="image_url"
+                   placeholder="https://example.com/banner.jpg"/>
+            <p style="color:var(--me-fg-dim);font-size:11px;margin-top:4px">
+              Direct image link (jpg / png / gif / webp). Leave blank for no image.
+            </p>
+          </div>
+
+          <div id="ann-error"
+               style="display:none;padding:10px 14px;border:1px solid rgba(252,165,165,.3);
+                      border-radius:8px;background:rgba(239,68,68,.05);font-size:12px;color:#fca5a5">
+          </div>
+
+          <button type="submit" id="ann-submit" class="me-btn"
+                  style="display:inline-flex;align-items:center;justify-content:center;
+                         gap:8px;width:100%;padding:12px 16px">
+            <span class="material-symbols-outlined" style="font-size:18px">send</span>
+            Send Announcement
+          </button>
+
+        </form>
+      </div><!-- /form col -->
+
+      <!-- RIGHT: live Discord embed preview -->
+      <div style="position:sticky;top:24px">
+
+        <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;font-weight:600;text-transform:uppercase;
+                       letter-spacing:.1em;color:var(--me-fg-muted)">Discord Preview</span>
+          <span style="font-size:10px;color:var(--me-fg-dim);background:var(--me-bg-elev-2);
+                       padding:2px 8px;border-radius:4px;border:1px solid var(--me-border)">Live</span>
+        </div>
+
+        <!-- Discord chrome -->
+        <div style="background:#313338;border-radius:8px;padding:16px 20px;
+                    font-family:'gg sans','Noto Sans',Whitney,sans-serif">
+
+          <!-- Bot header row -->
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:4px">
+            <div style="width:40px;height:40px;border-radius:50%;background:#5865f2;flex-shrink:0;
+                        display:flex;align-items:center;justify-content:center;margin-top:2px">
+              <span style="color:#fff;font-weight:800;font-size:16px">N</span>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                <span style="color:#f2f3f5;font-size:14px;font-weight:600">NYIM Bot</span>
+                <span style="background:#5865f2;color:#fff;font-size:9px;padding:1px 5px;
+                             border-radius:3px;font-weight:700;letter-spacing:.02em">APP</span>
+                <span id="pv-ts" style="color:#949ba4;font-size:11px"></span>
+              </div>
+              <!-- ping mention -->
+              <div id="pv-ping" style="color:#b5bac1;font-size:13px;margin-bottom:10px"></div>
+            </div>
+          </div>
+
+          <!-- Embed card — indented to align with message text -->
+          <div style="margin-left:52px">
+            <div style="border-left:4px solid #ad42f5;background:#2b2d31;
+                        border-radius:0 4px 4px 0;padding:12px 16px;max-width:420px">
+
+              <div id="pv-title"
+                   style="display:none;color:#f2f3f5;font-size:15px;font-weight:600;
+                          margin-bottom:8px;word-break:break-word;line-height:1.3"></div>
+
+              <div id="pv-desc"
+                   style="display:none;color:#dbdee1;font-size:14px;line-height:1.55;
+                          white-space:pre-wrap;word-break:break-word"></div>
+
+              <div id="pv-fields"></div>
+
+              <div id="pv-img-wrap" style="display:none;margin-top:12px">
+                <img id="pv-img" alt=""
+                     style="max-width:100%;border-radius:4px;display:block;max-height:300px;object-fit:cover"/>
+              </div>
+
+              <div id="pv-empty" style="color:#6d6f78;font-size:13px;font-style:italic;padding:2px 0">
+                Fill in the form to see a preview…
+              </div>
+
+            </div><!-- /embed card -->
+          </div><!-- /indent -->
+
+        </div><!-- /discord chrome -->
+
+        <!-- Channel label under preview -->
+        <div style="margin-top:8px;display:flex;align-items:center;gap:5px">
+          <span class="material-symbols-outlined" style="font-size:14px;color:var(--me-fg-dim)">tag</span>
+          <span id="pv-chan" style="font-size:12px;color:var(--me-fg-dim);font-family:monospace">events</span>
+        </div>
+
+      </div><!-- /preview col -->
+    </div><!-- /grid -->`;
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────
+  const f = {
+    channel: document.getElementById('ann-channel'),
+    title:   document.getElementById('ann-title'),
+    desc:    document.getElementById('ann-desc'),
+    para2:   document.getElementById('ann-para2'),
+    para3:   document.getElementById('ann-para3'),
+    para4:   document.getElementById('ann-para4'),
+    image:   document.getElementById('ann-image'),
+  };
+  const pv = {
+    title:   document.getElementById('pv-title'),
+    desc:    document.getElementById('pv-desc'),
+    fields:  document.getElementById('pv-fields'),
+    imgWrap: document.getElementById('pv-img-wrap'),
+    img:     document.getElementById('pv-img'),
+    empty:   document.getElementById('pv-empty'),
+    ping:    document.getElementById('pv-ping'),
+    chan:    document.getElementById('pv-chan'),
+    ts:      document.getElementById('pv-ts'),
+  };
+
+  // ── Live preview ─────────────────────────────────────────────────────────
+  function updatePreview() {
+    const title   = f.title.value.trim();
+    const desc    = f.desc.value.trim();
+    const para2   = f.para2.value.trim();
+    const para3   = f.para3.value.trim();
+    const para4   = f.para4.value.trim();
+    const imgUrl  = f.image.value.trim();
+    const chan    = f.channel.value;
+
+    const hasContent = !!(title || desc);
+    pv.empty.style.display = hasContent ? 'none' : 'block';
+
+    pv.title.style.display = title ? 'block' : 'none';
+    pv.title.textContent   = title;
+
+    pv.desc.style.display = desc ? 'block' : 'none';
+    pv.desc.textContent   = desc;
+
+    pv.fields.innerHTML = [para2, para3, para4]
+      .filter(Boolean)
+      .map(p =>
+        `<div style="color:#dbdee1;font-size:14px;line-height:1.55;margin-top:10px;
+                     white-space:pre-wrap;word-break:break-word">${escHtml(p)}</div>`
+      ).join('');
+
+    if (imgUrl) {
+      pv.imgWrap.style.display = 'block';
+      pv.img.src = imgUrl;
+      pv.img.onerror = () => { pv.imgWrap.style.display = 'none'; };
+      pv.img.onload  = () => { pv.imgWrap.style.display = 'block'; };
+    } else {
+      pv.imgWrap.style.display = 'none';
+    }
+
+    pv.ping.textContent = chan === 'event'
+      ? '||@Event Announcements||'
+      : '||@Announcements||';
+    pv.chan.textContent = chan === 'event' ? 'events' : 'announcements';
+    pv.ts.textContent  = 'Today at ' +
+      new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  Object.values(f).forEach(el => {
+    el.addEventListener('input',  updatePreview);
+    el.addEventListener('change', updatePreview);
+  });
+  updatePreview();
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+  document.getElementById('ann-form').onsubmit = async e => {
+    e.preventDefault();
+    const errEl = document.getElementById('ann-error');
+    errEl.style.display = 'none';
+
+    const payload = {
+      channel:     f.channel.value,
+      title:       f.title.value.trim(),
+      description: f.desc.value.trim(),
+    };
+    if (f.para2.value.trim())  payload.para2     = f.para2.value.trim();
+    if (f.para3.value.trim())  payload.para3     = f.para3.value.trim();
+    if (f.para4.value.trim())  payload.para4     = f.para4.value.trim();
+    if (f.image.value.trim())  payload.image_url = f.image.value.trim();
+
+    if (!payload.title) {
+      errEl.textContent = 'Title is required.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!payload.description) {
+      errEl.textContent = 'Description is required.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const btn = document.getElementById('ann-submit');
+    btn.disabled = true;
+    btn.innerHTML =
+      '<span class="material-symbols-outlined me-spin" style="font-size:16px">progress_activity</span>' +
+      ' Sending…';
+
+    try {
+      await api('/announcements/send', 'POST', payload);
+      toast('Announcement sent to Discord!');
+      document.getElementById('ann-form').reset();
+      updatePreview();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML =
+        '<span class="material-symbols-outlined" style="font-size:18px">send</span>' +
+        ' Send Announcement';
+    }
+  };
+};
+
 //  ESCAPE HELPERS (prevent XSS from API data)
 // ═══════════════════════════════════════════════════════════════════════════
 function escHtml(str) {
