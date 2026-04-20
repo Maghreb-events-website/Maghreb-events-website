@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "on-tertiary-container": "#4d2b00",
+                  "on-surface": "#dee3e9",
+                  "surface": "#0f1418",
+                  "surface-container-lowest": "#0a0f13",
+                  "background": "#0f1418",
+                  "surface-container-low": "#171c20",
+                  "on-secondary-fixed-variant": "#234b64",
+                  "on-secondary-container": "#94bad7",
+                  "on-background": "#dee3e9",
+                  "inverse-primary": "#006591",
+                  "secondary": "#a5cbe9",
+                  "primary-fixed": "#c9e6ff",
+                  "secondary-fixed": "#c9e6ff",
+                  "surface-tint": "#89ceff",
+                  "tertiary": "#ffb86e",
+                  "surface-variant": "#30353a",
+                  "secondary-container": "#234b64",
+                  "outline": "#88929b",
+                  "on-surface-variant": "#bec8d2",
+                  "on-error-container": "#ffdad6",
+                  "on-secondary": "#04344c",
+                  "inverse-surface": "#dee3e9",
+                  "surface-bright": "#353a3e",
+                  "primary-fixed-dim": "#89ceff",
+                  "primary": "#0ea5e9",
+                  "surface-container": "#1b2024",
+                  "on-primary": "#00344d",
+                  "inverse-on-surface": "#2c3135",
+                  "on-primary-fixed-variant": "#004c6e",
+                  "error-container": "#93000a",
+                  "on-tertiary": "#492900",
+                  "on-error": "#690005",
+                  "tertiary-container": "#de8712",
+                  "primary-container": "#0ea5e9",
+                  "surface-dim": "#0f1418",
+                  "secondary-fixed-dim": "#a5cbe9",
+                  "on-secondary-fixed": "#001e2f",
+                  "surface-container-highest": "#30353a",
+                  "on-tertiary-fixed-variant": "#693c00",
+                  "on-tertiary-fixed": "#2c1600",
+                  "on-primary-container": "#003751",
+                  "outline-variant": "#3e4850",
+                  "on-primary-fixed": "#001e2f",
+                  "error": "#ffb4ab",
+                  "surface-container-high": "#252b2f",
+                  "tertiary-fixed-dim": "#ffb86e",
+                  "tertiary-fixed": "#ffdcbd"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.125rem",
+                  "lg": "0.25rem",
+                  "xl": "0.5rem",
+                  "full": "0.75rem"
+          },
+          "fontFamily": {
+                  "headline": ["Manrope"],
+                  "body": ["Inter"],
+                  "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #0f1418;
+      color: #dee3e9;
+      font-family: 'Inter', sans-serif;
+      min-height: max(884px, 100dvh);
+    }
+    h1,h2,h3,h4 { font-family: 'Manrope', sans-serif; }
+  </style>
+  <link rel="stylesheet" href="assets/site.css"/>
+</head>
+<body class="min-h-screen flex flex-col" data-active-nav="airlines">
+<!-- TopAppBar -->
+
+
+<main class="flex-grow pt-20 pb-32 px-6 max-w-2xl mx-auto w-full">
+  <!-- Hero -->
+  <section class="mb-10">
+    <h2 class="font-headline font-light text-5xl md:text-6xl text-on-surface tracking-tight">Virtual Airlines</h2>
+    <h2 class="font-headline font-light text-5xl md:text-6xl text-[#0ea5e9] tracking-tight mb-4">Network</h2>
+    <p class="text-on-surface-variant text-base max-w-xl leading-relaxed">
+      Connecting the Maghreb skies. Explore the elite roster of virtual airlines participating in Maghreb Events' regional ecosystem.
+    </p>
+  </section>
+
+  <!-- Airlines list — populated from API -->
+  <section id="airlines-list" class="mb-10 space-y-0">
+    <div class="flex items-center gap-3 text-[#89ceff] text-sm py-6">
+      <span class="material-symbols-outlined text-lg" style="animation:spin 0.8s linear infinite">progress_activity</span>
+      <span>Loading airlines...</span>
+    </div>
+  </section>
+
+  <!-- Join the Network -->
+  <section class="bg-surface-container-low rounded-xl p-8 text-center mb-10 border border-outline-variant/5">
+    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+      <span class="material-symbols-outlined text-[#0ea5e9]">add</span>
+    </div>
+    <h3 class="font-headline text-lg text-on-surface mb-2">Join the Network</h3>
+    <p class="text-on-surface-variant text-sm mb-6">Want to feature your Virtual Airline here?</p>
+    <button id="submit-application-btn" class="border border-outline-variant/30 text-[#0ea5e9] px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-surface-container-high transition-colors">
+      Submit Application
+    </button>
+  </section>
+
+  <!-- Stats -->
+  <section class="grid grid-cols-2 gap-6 pb-8">
+    <div>
+      <p class="font-headline text-4xl font-light" id="stat-pilots">—</p>
+      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Total Pilots</p>
+    </div>
+    <div>
+      <p class="font-headline text-4xl font-light">450</p>
+      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Weekly Flights</p>
+    </div>
+    <div>
+      <p class="font-headline text-4xl font-light">82</p>
+      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Destinations</p>
+    </div>
+    <div>
+      <p class="font-headline text-4xl font-light" id="stat-vas">—</p>
+      <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Partner VAs</p>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="bg-[#0a0f13] border-t border-[#3e4850]/10 w-full py-12 px-8 mt-auto">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex flex-col items-center md:items-start gap-2">
+<span class="font-['Manrope'] font-medium text-[#dee3e9] text-lg">MAGHREB EVENTS</span>
+<p class="font-['Inter'] text-xs leading-relaxed text-[#bec8d2]">© 2024 Maghreb Events. VATSIM Middle East &amp; North Africa.</p>
+</div>
+<nav class="flex gap-6">
+<a class="font-['Inter'] text-xs text-[#bec8d2] hover:text-[#dee3e9] transition-all" href="#">Privacy Policy</a>
+<a class="font-['Inter'] text-xs text-[#bec8d2] hover:text-[#dee3e9] transition-all" href="#">Terms of Service</a>
+<a class="font-['Inter'] text-xs text-[#bec8d2] hover:text-[#dee3e9] transition-all" href="#">Contact</a>
+<a class="font-['Inter'] text-xs text-[#bec8d2] hover:text-[#dee3e9] transition-all" href="https://vatsim.net" target="_blank">VATSIM.net</a>
+</nav>
+</div>
+</footer>
+
+<!-- BottomNavBar (Mobile Only) -->
+
+
+<script src="assets/site.js"></script>
+<script>
+
+let allAirlines = [];
+
+function statusPill(s) {
+  const cls = s === 'active'    ? 'bg-green-500/10 text-green-400'
+            : s === 'observer'  ? 'bg-[#89ceff]/10 text-[#89ceff]'
+            : s === 'suspended' ? 'bg-red-500/10 text-red-400'
+            :                      'bg-[#30353a] text-[#bec8d2]';
+  return `<span class="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full ${cls}">${s}</span>`;
+}
+
+function airlineCard(a) {
+  const inner = `
+    <div style="height:90px;display:flex;align-items:center;justify-content:center;background:var(--me-bg-elev-2);border-radius:8px;overflow:hidden;margin-bottom:6px">
+      ${a.logo_url
+        ? `<img src="${a.logo_url}" alt="${a.name}" style="max-width:80%;max-height:80%;object-fit:contain"/>`
+        : `<span class="material-symbols-outlined" style="font-size:36px;color:var(--me-fg-dim)">flight</span>`}
+    </div>
+    <div class="flex items-center justify-between gap-2">
+      <div>
+        <h3 style="font-size:15px;margin:0">${a.name}</h3>
+        <p style="font-size:11px;color:var(--me-fg-dim);font-family:monospace;margin-top:2px">${a.icao}${a.callsign ? ' · ' + a.callsign : ''}</p>
+      </div>
+      ${statusPill(a.status)}
+    </div>
+    ${a.description ? `<p>${a.description}</p>` : ''}
+    <p style="font-size:11px;color:var(--me-fg-dim);margin-top:auto">${a.pilot_count || 0} pilots</p>
+  `;
+  // No website field for airlines today — but if the description contains a URL, link it.
+  return `<article class="me-card">${inner}</article>`;
+}
+
+function renderAirlines(list) {
+  const root = document.getElementById('airlines-list');
+  if (!list.length) { root.innerHTML = '<p style="color:var(--me-fg-muted)">No airlines match your search.</p>'; return; }
+  root.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">${list.map(airlineCard).join('')}</div>`;
+}
+
+(async () => {
+  try {
+    const res = await fetch(`${ME.API}/airlines?per=100`);
+    const json = await res.json();
+    allAirlines = json.data || [];
+    renderAirlines(allAirlines);
+    if (json.stats) {
+      document.getElementById('stat-pilots').textContent = json.stats.total_pilots || 0;
+      document.getElementById('stat-vas').textContent    = json.stats.total || 0;
+    }
+  } catch (err) {
+    console.error('Airlines API error:', err);
+    document.getElementById('airlines-list').innerHTML = `<div style="padding:16px;border:1px solid rgba(239,68,68,0.3);border-radius:8px;background:rgba(239,68,68,0.05)">
+      <p style="color:#f87171;font-weight:600;margin:0 0 4px">Unable to reach the API</p>
+      <p style="color:var(--me-fg-muted);font-size:12px;margin:0">${err.message}</p>
+    </div>`;
+  }
+})();
+
+</script>
+</body></html>
