@@ -8,8 +8,6 @@ define('VATSIM_SANDBOX',       true);
 define('VATSIM_CLIENT_ID',     '1383');
 define('VATSIM_CLIENT_SECRET', '4UzF6OiKm940MbdKH6MH6LAdgJVN2l4h6nH9x5so');
 define('VATSIM_REDIRECT_URI',  'https://jamie-datson.com/callback');
-define('BOT_BRIDGE_TOKEN', 'assdffsdfdsfdsfsdfgebbsvsadfggnsdbsvagnbsdvavsbsdbsb');  // same value as above
-define('BOT_BRIDGE_URL',   'http://127.0.0.1:5001/send');
 
 // ── JWT secret ────────────────────────────────────────────────────────────
 define('JWT_SECRET', 'MghrbEvts_k9mX2pQvL8rNwT5jYhD3bF7sC1uA6eG0oI4n_2024!');
