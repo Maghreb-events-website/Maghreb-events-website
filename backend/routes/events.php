@@ -90,7 +90,7 @@ function register_event_routes(Router $router): void {
 
     // DELETE /api/events/:id
     $router->delete('/api/events/:id', function(array $params) {
-        $payload = Auth::requireRole('superadmin');
+        $payload = Auth::requireRole('admin');
         $db      = Database::getInstance();
 
         $stmt = $db->prepare("SELECT title FROM events WHERE id = ?");

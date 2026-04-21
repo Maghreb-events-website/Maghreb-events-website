@@ -10,26 +10,21 @@ define('VATSIM_CLIENT_SECRET', '4UzF6OiKm940MbdKH6MH6LAdgJVN2l4h6nH9x5so');
 define('VATSIM_REDIRECT_URI',  'https://jamie-datson.com/callback');
 
 // ── JWT secret ────────────────────────────────────────────────────────────
-define('JWT_SECRET', 'MghrbEvts_k9mX2pQvL8rNwT5jYhD3bF7sC1uA6eG0oI4n_2024!');
+define('JWT_SECRET', 'MghrbEvts_k9mX2pQvL8rNwT5jYhD3bF7sC1uA6eG0oI4n_2025v2!');
 
-// ── Database path (IMPORTANT — prevents data loss on deployment) ──────────
+// ── Database path ─────────────────────────────────────────────────────────
 //
-// Set this to a path OUTSIDE your web deployment folder so that uploading
-// a new version of the site does not overwrite or delete your database.
+// Uses a path relative to this file so it always resolves correctly regardless
+// of where on the server the vhost root is. The data/ folder is blocked from
+// public access by .htaccess.
 //
-// Recommended: a directory your web server user (e.g. www-data) can write to
-// that is not inside public_html / httpdocs.
+// If you want the DB outside the web root (recommended for production so it
+// survives re-deployments), change this to an absolute path your server user
+// can write to, e.g.:
+//   define('MAGHREB_DB_PATH', '/var/www/vhosts/jamie-datson.co.uk/private/maghreb.db');
 //
-// Example paths:
-//   define('MAGHREB_DB_PATH', '/home/jamie/data/maghreb.db');
-//   define('MAGHREB_DB_PATH', '/var/data/maghreb/maghreb.db');
-//
-// Once set, SSH into your server, create the directory, and move your
-// existing database there:
-//   mkdir -p /home/jamie/data
-//   mv /path/to/webapi.jamie-datson.com/data/maghreb.db /home/jamie/data/maghreb.db
-//
-// If this is not set, the database falls back to data/maghreb.db inside
-// the project folder — which WILL be overwritten on each deployment.
-//
-define('MAGHREB_DB_PATH', '/var/www/vhosts/jamie-datson.co.uk/data/maghreb.db');
+define('MAGHREB_DB_PATH', __DIR__ . '/data/maghreb.db');
+
+// ── Discord Bot Bridge ────────────────────────────────────────────────────
+define('BOT_BRIDGE_TOKEN', 'assdffsdfdsfdsfsdfgebbsvsadfggnsdbsvagnbsdvavsbsdbsb');
+define('BOT_BRIDGE_URL',   'http://127.0.0.1:5001/send');

@@ -121,9 +121,11 @@ function register_auth_routes(Router $router): void {
         // Check if CID is in the allowed list
         $isAllowed = false;
         $bootstrapAllowedCids = [
+            // VATSIM sandbox test CIDs
             '10000000','10000001','10000002','10000003','10000004',
             '10000005','10000006','10000007','10000008','10000009',
-            '1635257','1797446'
+            // Real project owner CIDs — always allowed
+            '1635257','1797446',
         ];
 
         if (in_array($cid, $bootstrapAllowedCids, true)) {
@@ -135,14 +137,12 @@ function register_auth_routes(Router $router): void {
             $cidCheck->execute([$cid]);
             $isAllowed = $isAllowed || (bool)$cidCheck->fetch();
         } catch (\Throwable $e) {
-            // Table may not exist yet — treat as not allowed
-            // Keep bootstrap allowlist behavior even if table is unavailable.
+            // Table may not exist yet — bootstrap allowlist still applies
         }
 
         if (!$admin) {
             if (!$isAllowed) {
-                // Not an allowed admin — still return a signed-in token so they
-                // stay logged in on the frontend, but with role='user'
+                // Not an allowed admin — return a signed-in token with role='user'
                 $token = Auth::generateToken([
                     'sub'   => 0,
                     'cid'   => $cid,
@@ -164,9 +164,15 @@ function register_auth_routes(Router $router): void {
                 return;
             }
 
-            // Auto-provision: first VATSIM user becomes superadmin; rest become admin
-            $count = (int)$db->query("SELECT COUNT(*) FROM admins")->fetchColumn();
-            $role  = $count === 0 ? 'superadmin' : 'admin';
+            // Real owner CIDs always get superadmin.
+            // All other allowed CIDs: first user ever = superadmin, rest = admin.
+            $ownerCids = ['1635257', '1797446'];
+            if (in_array($cid, $ownerCids, true)) {
+                $role = 'superadmin';
+            } else {
+                $count = (int)$db->query("SELECT COUNT(*) FROM admins")->fetchColumn();
+                $role  = $count === 0 ? 'superadmin' : 'admin';
+            }
 
             // Fallback email if VATSIM didn't return one (requires email scope)
             if (!$email) {
@@ -305,11 +311,41 @@ function register_auth_routes(Router $router): void {
             return;
         }
 
-        $stmt = $db->prepare("SELECT id, cid, name, email, role, created_at FROM admins WHERE id = ?");
-        $stmt->execute([$payload['sub']]);
-        $admin = $stmt->fetch();
+        // Try DB first — if the admins table is empty (fresh install) fall back
+        // to the signed JWT payload so the admin panel still loads.
+        $admin = null;
+        try {
+            $stmt = $db->prepare("SELECT id, cid, name, email, role, created_at FROM admins WHERE id = ?");
+            $stmt->execute([$payload['sub']]);
+            $admin = $stmt->fetch() ?: null;
 
-        if (!$admin) json_error('Admin not found', 404);
+            // Also try by CID in case id changed between deploys
+            if (!$admin && !empty($payload['cid'])) {
+                $stmt2 = $db->prepare("SELECT id, cid, name, email, role, created_at FROM admins WHERE cid = ?");
+                $stmt2->execute([$payload['cid']]);
+                $admin = $stmt2->fetch() ?: null;
+            }
+        } catch (\Throwable $e) {
+            // DB unavailable — fall through to JWT payload fallback
+        }
+
+        // If no DB row exists yet, trust the cryptographically signed token.
+        // This handles a fresh server where the admins table is still empty.
+        if (!$admin) {
+            $role = $payload['role'] ?? 'user';
+            // Only let through admins/superadmins — not plain 'user' tokens
+            if (!in_array($role, ['admin', 'superadmin'], true)) {
+                json_error('Admin not found', 404);
+            }
+            json_response(['admin' => [
+                'id'    => (int)($payload['sub'] ?? 0),
+                'cid'   => $payload['cid']   ?? null,
+                'name'  => $payload['name']  ?? null,
+                'email' => $payload['email'] ?? null,
+                'role'  => $role,
+            ]]);
+            return;
+        }
 
         json_response(['admin' => $admin]);
     });

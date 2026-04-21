@@ -114,7 +114,7 @@ function register_partner_routes(Router $router): void {
 
     // DELETE /api/partners/:id
     $router->delete('/api/partners/:id', function(array $params) {
-        $payload = Auth::requireRole('superadmin');
+        $payload = Auth::requireRole('admin');
         $db      = Database::getInstance();
 
         $stmt = $db->prepare("SELECT name FROM partners WHERE id = ?");

@@ -13,7 +13,7 @@ function register_settings_routes(Router $router): void {
 
     // PUT /api/settings/test-mode  (superadmin only)
     $router->put('/api/settings/test-mode', function() {
-        $payload = Auth::requireRole('superadmin');
+        $payload = Auth::requireRole('admin');
         $db      = Database::getInstance();
         $body    = body();
 
@@ -38,7 +38,7 @@ function register_settings_routes(Router $router): void {
 
     // DELETE /api/settings/test-data  — wipe all test tables (superadmin only)
     $router->delete('/api/settings/test-data', function() {
-        $payload = Auth::requireRole('superadmin');
+        $payload = Auth::requireRole('admin');
         $db      = Database::getInstance();
 
         foreach (['test_events','test_partners','test_airlines','test_planning','test_hitsquad'] as $t) {

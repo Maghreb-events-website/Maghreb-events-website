@@ -53,26 +53,36 @@ class Auth {
     }
 
     private static function readAuthorizationHeader(): string {
+        // X-Auth-Token is a custom header Apache NEVER strips — it is the
+        // primary auth mechanism on shared hosting where Authorization is blocked.
+        // The frontend sends the JWT as "Bearer <token>" in both headers.
         $candidates = [
-            $_SERVER['HTTP_AUTHORIZATION']          ?? '',
-            $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '',
-            $_SERVER['Authorization']               ?? '',
-            // Set by the .htaccess RewriteRule when Apache strips the header
-            getenv('HTTP_AUTHORIZATION') ?: '',
+            $_SERVER['HTTP_X_AUTH_TOKEN']                    ?? '',
+            $_SERVER['HTTP_AUTHORIZATION']                   ?? '',
+            $_SERVER['REDIRECT_HTTP_AUTHORIZATION']          ?? '',
+            $_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION'] ?? '',
+            $_SERVER['Authorization']                        ?? '',
+            getenv('HTTP_AUTHORIZATION')                     ?: '',
         ];
 
         if (function_exists('getallheaders')) {
-            $headers = getallheaders();
-            if (is_array($headers)) {
-                $candidates[] = $headers['Authorization'] ?? '';
-                $candidates[] = $headers['authorization'] ?? '';
-            }
+            $h = getallheaders() ?: [];
+            $candidates[] = $h['X-Auth-Token']  ?? '';
+            $candidates[] = $h['x-auth-token']  ?? '';
+            $candidates[] = $h['Authorization'] ?? '';
+            $candidates[] = $h['authorization'] ?? '';
+        }
+
+        if (function_exists('apache_request_headers')) {
+            $h = apache_request_headers() ?: [];
+            $candidates[] = $h['X-Auth-Token']  ?? '';
+            $candidates[] = $h['Authorization'] ?? '';
+            $candidates[] = $h['authorization'] ?? '';
         }
 
         foreach ($candidates as $value) {
-            if (is_string($value) && trim($value) !== '') {
-                return trim($value);
-            }
+            $value = trim((string)$value);
+            if ($value !== '') return $value;
         }
         return '';
     }
