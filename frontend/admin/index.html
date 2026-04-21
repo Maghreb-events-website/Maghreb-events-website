@@ -239,8 +239,8 @@ const TABS = [
   { key: 'events',   label: 'Events',         icon: 'event' },
   { key: 'announcements', label: 'Announcements', icon: 'campaign' },
   { key: 'allowedcids', label: 'Allowed CIDs', icon: 'verified_user' },
+  { key: 'giveaways', label: 'Giveaways',       icon: 'redeem' },
   { key: 'admins',   label: 'Admins',         icon: 'admin_panel_settings', superOnly: true },
-  { key: 'settings', label: 'Settings',        icon: 'tune',                superOnly: true },
 ];
 
 let activeTab = 'partners'; // Fix initialization error
@@ -1296,150 +1296,262 @@ PANELS.allowedcids = async function () {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  SETTINGS  (superadmin only — test mode toggle + local preview)
+//  GIVEAWAYS
 // ═══════════════════════════════════════════════════════════════════════════
-PANELS.settings = async function () {
-  if (!isSuperAdmin()) {
-    document.getElementById('panel').innerHTML = '<p style="color:var(--me-fg-muted)">Superadmin access required.</p>';
-    return;
-  }
+PANELS.giveaways = async function () {
   const panel = document.getElementById('panel');
-  panel.innerHTML = `
-    <h2 style="font-size:18px;font-weight:600;margin-bottom:24px;color:var(--me-fg)">Settings</h2>
+  panel.innerHTML = panelHTML('Giveaways <span style="font-size:13px;color:var(--me-fg-muted);font-weight:400">— manage prize draws</span>', '+ New Giveaway', 'btn-add-giveaway');
+  document.getElementById('btn-add-giveaway').onclick = () => openGiveawayModal(null);
 
-    <!-- ── DB Test Mode ─────────────────────────────────────────────── -->
-    <div class="me-card" style="padding:24px;border:1px solid var(--me-border);max-width:560px;margin-bottom:20px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <span class="material-symbols-outlined" style="color:var(--me-primary);font-size:20px">science</span>
-            <span style="font-weight:600;font-size:15px;color:var(--me-fg)">Test Mode</span>
-            <span id="tm-active-badge" style="display:none;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,.15);color:#f59e0b">ACTIVE</span>
-          </div>
-          <p style="color:var(--me-fg-muted);font-size:13px;line-height:1.6;margin:0">
-            When on, all public pages show a <strong style="color:var(--me-fg)">TEST MODE</strong> banner and display data from isolated test tables.
-            A floating <strong style="color:var(--me-fg)">＋ Add</strong> button appears on each page so anyone can add test records without touching live data.
-            Turning it off instantly restores production data for all visitors.
-          </p>
-        </div>
-        <label style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;flex-shrink:0">
-          <div id="tm-switch" style="position:relative;width:52px;height:28px;border-radius:14px;background:var(--me-bg-elev-2);border:1px solid var(--me-border);transition:background .2s,border-color .2s;cursor:pointer">
-            <div id="tm-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#6b7280;transition:transform .2s,background .2s"></div>
-          </div>
-          <span id="tm-lbl" style="font-size:11px;color:var(--me-fg-muted);font-weight:500">OFF</span>
-        </label>
-      </div>
-    </div>
+  let giveaways = [];
 
-    <!-- ── Local Preview Mode ────────────────────────────────────────── -->
-    <div class="me-card" style="padding:24px;border:1px solid var(--me-border);max-width:560px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <span class="material-symbols-outlined" style="color:#a78bfa;font-size:20px">visibility</span>
-            <span style="font-weight:600;font-size:15px;color:var(--me-fg)">Local Preview Mode</span>
-            <span id="lp-active-badge" style="display:none;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:rgba(167,139,250,.15);color:#a78bfa">ACTIVE</span>
-          </div>
-          <p style="color:var(--me-fg-muted);font-size:13px;line-height:1.6;margin:0">
-            Adds a <strong style="color:var(--me-fg)">＋ Add</strong> button to each admin panel section so you can inject local preview records.
-            Data is <strong style="color:var(--me-fg)">in-memory only</strong> — never touches the database, clears on refresh, and broadcasts
-            instantly to all open admin tabs via <code style="font-size:11px;background:var(--me-bg-elev-2);padding:1px 5px;border-radius:4px">BroadcastChannel</code>.
-          </p>
-          <div id="lp-counts" style="margin-top:10px;font-size:12px;color:var(--me-fg-dim)"></div>
-        </div>
-        <label style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;flex-shrink:0">
-          <div id="lp-switch" style="position:relative;width:52px;height:28px;border-radius:14px;background:var(--me-bg-elev-2);border:1px solid var(--me-border);transition:background .2s,border-color .2s;cursor:pointer">
-            <div id="lp-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#6b7280;transition:transform .2s,background .2s"></div>
-          </div>
-          <span id="lp-lbl" style="font-size:11px;color:var(--me-fg-muted);font-weight:500">OFF</span>
-        </label>
-      </div>
-      <div id="lp-clear-wrap" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--me-border)">
-        <button id="lp-clear-btn" class="me-btn me-btn--ghost" style="color:#fca5a5;font-size:12px">
-          <span class="material-symbols-outlined" style="font-size:13px;vertical-align:-2px">delete_sweep</span>
-          Clear all local preview data
-        </button>
-      </div>
-    </div>`;
-
-  // ── DB Test Mode ──────────────────────────────────────────────────────────
-  let on = false;
-  try { const r = await api('/settings/test-mode'); on = !!r.test_mode; } catch(e) {}
-
-  function applyUI(state) {
-    on = state;
-    const sw = document.getElementById('tm-switch');
-    const kn = document.getElementById('tm-knob');
-    const lb = document.getElementById('tm-lbl');
-    const bg = document.getElementById('tm-active-badge');
-    if (state) {
-      sw.style.background = 'rgba(245,158,11,.2)'; sw.style.borderColor = '#f59e0b';
-      kn.style.transform = 'translateX(24px)'; kn.style.background = '#f59e0b';
-      lb.textContent = 'ON'; lb.style.color = '#f59e0b'; bg.style.display = 'inline-block';
-    } else {
-      sw.style.background = 'var(--me-bg-elev-2)'; sw.style.borderColor = 'var(--me-border)';
-      kn.style.transform = 'translateX(0)'; kn.style.background = '#6b7280';
-      lb.textContent = 'OFF'; lb.style.color = 'var(--me-fg-muted)'; bg.style.display = 'none';
-    }
+  function statusPill(s) {
+    const map = {upcoming:'background:rgba(137,206,255,.12);color:#89ceff', open:'background:rgba(74,222,128,.12);color:#4ade80', closed:'background:rgba(255,184,110,.12);color:#ffb86e', drawn:'background:rgba(167,139,250,.12);color:#a78bfa'};
+    return `<span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;${map[s]||'background:rgba(255,255,255,.06);color:var(--me-fg-muted)'}">${s}</span>`;
   }
-  applyUI(on);
 
-  document.getElementById('tm-switch').onclick = async () => {
-    const next = !on;
+  function renderList(items) {
+    const el = document.getElementById('panel-list');
+    if (!items.length) { el.innerHTML = '<p style="color:var(--me-fg-muted);font-size:13px">No giveaways yet.</p>'; return; }
+    el.innerHTML = items.map(g => {
+      const prizes = (g.prizes||[]).slice(0,3).join(', ') + (g.prizes.length > 3 ? ` +${g.prizes.length-3} more` : '');
+      const winnerBadge = g.winner_cid ? `<div style="margin-top:8px;padding:8px 12px;border-radius:6px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);font-size:12px">
+        🏆 <strong style="color:#a78bfa">Winner:</strong> ${escHtml(g.winner_name||g.winner_cid)} (CID ${escHtml(g.winner_cid)}) — <em>${escHtml(g.winner_prize||'')}</em>
+      </div>` : '';
+      return `<div style="padding:16px 0;border-bottom:1px solid var(--me-border)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+              <span style="font-weight:600;font-size:15px">${escHtml(g.title)}</span>
+              ${statusPill(g.status)}
+              <span style="font-size:12px;color:var(--me-fg-muted)">${g.entry_count||0} entr${g.entry_count===1?'y':'ies'}</span>
+            </div>
+            ${g.description ? `<p style="font-size:13px;color:var(--me-fg-muted);margin:0 0 4px">${escHtml(g.description)}</p>` : ''}
+            ${prizes ? `<p style="font-size:12px;color:var(--me-fg-dim);margin:0">🎁 Prizes: ${escHtml(prizes)}</p>` : ''}
+            ${winnerBadge}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:center">
+            ${g.status === 'upcoming' ? `<button onclick="setGiveawayStatus(${g.id},'open')" class="me-btn" style="font-size:12px;padding:5px 10px;background:rgba(74,222,128,.12);color:#4ade80;border-color:rgba(74,222,128,.2)">Open</button>` : ''}
+            ${g.status === 'open' ? `<button onclick="setGiveawayStatus(${g.id},'closed')" class="me-btn" style="font-size:12px;padding:5px 10px;background:rgba(255,184,110,.12);color:#ffb86e;border-color:rgba(255,184,110,.2)">Close</button>` : ''}
+            ${g.status === 'open' ? `<button onclick="openAddEntryModal(${g.id},'${escAttr(g.title)}')" class="me-btn" style="font-size:12px;padding:5px 10px;background:rgba(74,222,128,.06);color:#4ade80;border-color:rgba(74,222,128,.2)">+ Add Entry</button>` : ''}
+            ${g.status === 'closed' ? `<button onclick="openDrawModal(${g.id})" class="me-btn" style="font-size:12px;padding:5px 10px;background:rgba(167,139,250,.12);color:#a78bfa;border-color:rgba(167,139,250,.2)">🎲 Draw Winner</button>` : ''}
+            ${g.status !== 'drawn' ? `<button onclick="openGiveawayModal(${g.id})" class="me-btn me-btn--ghost" style="font-size:12px;padding:5px 10px">Edit</button>` : ''}
+            <button onclick="viewEntries(${g.id},'${escAttr(g.title)}')" class="me-btn me-btn--ghost" style="font-size:12px;padding:5px 10px">Entries</button>
+            <button onclick="deleteGiveaway(${g.id},'${escAttr(g.title)}')" class="me-btn me-btn--ghost" style="font-size:12px;padding:5px 10px;color:#fca5a5">Delete</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function load() {
+    setListLoading();
     try {
-      await api('/settings/test-mode', 'PUT', { enabled: next });
-      applyUI(next);
-      toast('Test mode ' + (next ? 'enabled' : 'disabled'));
-    } catch(e) { toast(e.message, 'err'); }
+      const r = await api('/giveaways');
+      giveaways = r.data || [];
+      renderList(giveaways);
+    } catch(e) { setListError(e.message); }
+  }
+
+  window.setGiveawayStatus = async (id, status) => {
+    try { await api(`/giveaways/${id}/status`, 'PATCH', {status}); toast('Status updated'); load(); }
+    catch(e) { toast(e.message,'err'); }
   };
 
-  // ── Local Preview Mode ────────────────────────────────────────────────────
-  function applyLpUI(state) {
-    const sw = document.getElementById('lp-switch');
-    const kn = document.getElementById('lp-knob');
-    const lb = document.getElementById('lp-lbl');
-    const bg = document.getElementById('lp-active-badge');
-    const cw = document.getElementById('lp-clear-wrap');
-    if (!sw) return;
-    if (state) {
-      sw.style.background = 'rgba(167,139,250,.2)'; sw.style.borderColor = '#a78bfa';
-      kn.style.transform = 'translateX(24px)'; kn.style.background = '#a78bfa';
-      lb.textContent = 'ON'; lb.style.color = '#a78bfa'; bg.style.display = 'inline-block';
-      cw.style.display = 'block';
-    } else {
-      sw.style.background = 'var(--me-bg-elev-2)'; sw.style.borderColor = 'var(--me-border)';
-      kn.style.transform = 'translateX(0)'; kn.style.background = '#6b7280';
-      lb.textContent = 'OFF'; lb.style.color = 'var(--me-fg-muted)'; bg.style.display = 'none';
-      cw.style.display = 'none';
+  window.deleteGiveaway = async (id, title) => {
+    if (!confirm(`Delete giveaway "${title}"? All entries will also be deleted.`)) return;
+    try { await api(`/giveaways/${id}`, 'DELETE'); toast('Giveaway deleted'); load(); }
+    catch(e) { toast(e.message,'err'); }
+  };
+
+  window.viewEntries = async (id, title) => {
+    openModal(`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">Entries — ${escHtml(title)}</h3>
+      <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div id="entries-list"><span style="color:var(--me-fg-muted);font-size:13px">Loading…</span></div>`);
+    try {
+      const r = await api(`/giveaways/${id}/entries`);
+      const rows = r.data || [];
+      document.getElementById('entries-list').innerHTML = rows.length
+        ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="border-bottom:1px solid var(--me-border);color:var(--me-fg-muted)">
+              <th style="text-align:left;padding:6px 8px">#</th>
+              <th style="text-align:left;padding:6px 8px">CID</th>
+              <th style="text-align:left;padding:6px 8px">Name</th>
+              <th style="text-align:left;padding:6px 8px">Entered</th>
+            </tr></thead>
+            <tbody>${rows.map((e,i)=>`<tr style="border-bottom:1px solid var(--me-border)">
+              <td style="padding:6px 8px;color:var(--me-fg-muted)">${i+1}</td>
+              <td style="padding:6px 8px;font-family:monospace">${escHtml(e.cid)}</td>
+              <td style="padding:6px 8px">${escHtml(e.name||'—')}</td>
+              <td style="padding:6px 8px;color:var(--me-fg-muted)">${e.entered_at ? new Date(e.entered_at).toLocaleString() : '—'}</td>
+            </tr>`).join('')}</tbody>
+          </table>`
+        : '<p style="color:var(--me-fg-muted);font-size:13px">No entries yet.</p>';
+    } catch(e) { document.getElementById('entries-list').innerHTML = `<p style="color:#fca5a5">${e.message}</p>`; }
+  };
+
+  window.openDrawModal = (id) => {
+    const g = giveaways.find(x => x.id === id);
+    if (!g) return;
+    openModal(`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">Draw Winner</h3>
+        <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <p style="font-size:13px;color:var(--me-fg-muted);margin-bottom:16px">
+        Paste or type the <strong style="color:var(--me-fg)">eligible CIDs</strong> (one per line). The system will intersect these with the entry list and randomly select a winner, assigning them a random prize from the prize pool.
+      </p>
+      ${g.eligible_cids && g.eligible_cids.length ? `<p style="font-size:12px;color:var(--me-fg-dim);margin-bottom:8px">Previously saved eligible CIDs pre-loaded (${g.eligible_cids.length})</p>` : ''}
+      <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:6px">Eligible CIDs (one per line) *</label>
+      <textarea id="draw-cids" rows="8" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:10px;color:var(--me-fg);font-family:monospace;font-size:12px;resize:vertical">${(g.eligible_cids||[]).join('\n')}</textarea>
+      <div id="draw-result" style="margin-top:16px"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button id="draw-btn" class="me-btn" style="flex:1">🎲 Draw Winner</button>
+        <button type="button" onclick="closeModal()" class="me-btn me-btn--ghost">Cancel</button>
+      </div>`);
+
+    document.getElementById('draw-btn').onclick = async () => {
+      const raw = document.getElementById('draw-cids').value;
+      const cids = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+      if (!cids.length) { toast('Please enter at least one eligible CID','err'); return; }
+      document.getElementById('draw-btn').disabled = true;
+      document.getElementById('draw-btn').textContent = 'Drawing…';
+      try {
+        const r = await api(`/giveaways/${id}/draw`, 'POST', {eligible_cids: cids});
+        document.getElementById('draw-result').innerHTML = `
+          <div style="padding:16px;border-radius:8px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25)">
+            <p style="font-size:15px;font-weight:600;color:#a78bfa;margin:0 0 8px">🏆 Winner Drawn!</p>
+            <p style="margin:0 0 4px;font-size:14px"><strong>Name:</strong> ${escHtml(r.winner_name||r.winner_cid)}</p>
+            <p style="margin:0 0 4px;font-size:14px"><strong>CID:</strong> <span style="font-family:monospace">${escHtml(r.winner_cid)}</span></p>
+            <p style="margin:0 0 4px;font-size:14px"><strong>Prize:</strong> ${escHtml(r.winner_prize)}</p>
+            <p style="margin:0;font-size:12px;color:var(--me-fg-muted)">${r.qualified_pool} eligible of ${r.total_entries} total entries</p>
+          </div>`;
+        document.getElementById('draw-btn').style.display = 'none';
+        toast('Winner drawn!');
+        load();
+      } catch(e) {
+        document.getElementById('draw-result').innerHTML = `<p style="color:#fca5a5;font-size:13px">${e.message}</p>`;
+        document.getElementById('draw-btn').disabled = false;
+        document.getElementById('draw-btn').textContent = '🎲 Draw Winner';
+      }
+    };
+  };
+
+  function openGiveawayModal(id) {
+    const g = id ? giveaways.find(x => x.id === id) : null;
+    openModal(`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">${g ? 'Edit Giveaway' : 'New Giveaway'}</h3>
+        <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Title *</label>
+          <input id="gw-title" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg)"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Description</label>
+          <textarea id="gw-desc" rows="3" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg);resize:vertical"></textarea>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Prizes (one per line)</label>
+          <textarea id="gw-prizes" rows="4" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg);resize:vertical"></textarea>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Status</label>
+          <select id="gw-status" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg)">
+            ${['upcoming','open','closed'].map(s=>`<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button id="gw-save" class="me-btn" style="flex:1">${g ? 'Save Changes' : 'Create Giveaway'}</button>
+          <button type="button" onclick="closeModal()" class="me-btn me-btn--ghost">Cancel</button>
+        </div>
+      </div>`);
+
+    // Populate fields safely via JS (avoids any escaping/newline issues in template literals)
+    if (g) {
+      document.getElementById('gw-title').value  = g.title || '';
+      document.getElementById('gw-desc').value   = g.description || '';
+      document.getElementById('gw-prizes').value = (g.prizes || []).join('\n');
+      const sel = document.getElementById('gw-status');
+      for (const opt of sel.options) { if (opt.value === g.status) { opt.selected = true; break; } }
     }
-    refreshLpCounts();
+
+    document.getElementById('gw-save').onclick = async () => {
+      const title = document.getElementById('gw-title').value.trim();
+      if (!title) { toast('Title is required','err'); return; }
+      const prizes = document.getElementById('gw-prizes').value.split('\n').map(s=>s.trim()).filter(Boolean);
+      const body = {
+        title,
+        description: document.getElementById('gw-desc').value.trim() || null,
+        prizes,
+        status: document.getElementById('gw-status').value,
+      };
+      try {
+        if (g) { await api(`/giveaways/${g.id}`, 'PUT', body); toast('Giveaway updated'); }
+        else    { await api('/giveaways', 'POST', body); toast('Giveaway created'); }
+        closeModal(); load();
+      } catch(e) { toast(e.message,'err'); }
+    };
   }
 
-  function refreshLpCounts() {
-    const el = document.getElementById('lp-counts');
-    if (!el) return;
-    const total = Object.values(LP_STORE).reduce((s, arr) => s + arr.length, 0);
-    el.textContent = total > 0
-      ? `${total} local record${total !== 1 ? 's' : ''} in memory across ${Object.keys(LP_STORE).filter(k => LP_STORE[k].length).length} section(s)`
-      : '';
-  }
+  window.openAddEntryModal = async (id, title) => {
+    openModal(`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">Add Entry</h3>
+        <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <p style="font-size:13px;color:var(--me-fg-muted);margin-bottom:16px">
+        Manually add a user to <strong style="color:var(--me-fg)"></strong> by their VATSIM CID.
+      </p>
+      <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">VATSIM CID *</label>
+      <input id="entry-cid" type="text" placeholder="e.g. 1234567"
+        style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg);font-family:monospace;margin-bottom:10px"/>
+      <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Name (optional)</label>
+      <input id="entry-name" type="text" placeholder="Full name"
+        style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg);margin-bottom:16px"/>
+      <div id="entry-result" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <button id="entry-save" class="me-btn" style="flex:1">Add Entry</button>
+        <button type="button" onclick="closeModal()" class="me-btn me-btn--ghost">Cancel</button>
+      </div>`);
 
-  applyLpUI(LP_MODE);
-  refreshLpCounts();
+    document.querySelector('#me-modal-backdrop h3 + *')?.previousSibling;
+    // Set the giveaway title safely
+    const titleEl = document.querySelector('#me-modal-backdrop p strong');
+    if (titleEl) titleEl.textContent = title;
 
-  document.getElementById('lp-switch').onclick = () => {
-    LP_setMode(!LP_MODE);
-    applyLpUI(LP_MODE);
-    toast('Local preview mode ' + (LP_MODE ? 'enabled — ＋ Add buttons now appear in each panel' : 'disabled'));
+    document.getElementById('entry-save').onclick = async () => {
+      const cid  = document.getElementById('entry-cid').value.trim();
+      const name = document.getElementById('entry-name').value.trim();
+      if (!cid) { toast('CID is required','err'); return; }
+      document.getElementById('entry-save').disabled = true;
+      document.getElementById('entry-save').textContent = 'Adding…';
+      try {
+        await api(`/giveaways/${id}/admin-entry`, 'POST', { cid, name: name || null });
+        document.getElementById('entry-result').innerHTML =
+          `<p style="color:#4ade80;font-size:13px">✓ Entry added for CID ${escHtml(cid)}</p>`;
+        document.getElementById('entry-cid').value  = '';
+        document.getElementById('entry-name').value = '';
+        document.getElementById('entry-save').disabled = false;
+        document.getElementById('entry-save').textContent = 'Add Entry';
+        load();
+      } catch(e) {
+        document.getElementById('entry-result').innerHTML =
+          `<p style="color:#fca5a5;font-size:13px">${escHtml(e.message)}</p>`;
+        document.getElementById('entry-save').disabled = false;
+        document.getElementById('entry-save').textContent = 'Add Entry';
+      }
+    };
   };
 
-  document.getElementById('lp-clear-btn').onclick = () => {
-    if (!confirm('Clear all local preview data? This cannot be undone.')) return;
-    LP_clearAll();
-    refreshLpCounts();
-    toast('Local preview data cleared');
-  };
+  load();
 };
+
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  LOCAL PREVIEW MODE — in-memory only, BroadcastChannel sync, no DB writes

@@ -67,8 +67,9 @@ require_once __DIR__ . '/routes/admins.php';
 require_once __DIR__ . '/routes/dashboard.php';
 require_once __DIR__ . '/routes/people.php';
 require_once __DIR__ . '/routes/briefing.php';
-require_once __DIR__ . '/routes/settings.php';
+require_once __DIR__ . '/routes/giveaway.php';
 require_once __DIR__ . '/routes/discord.php';
+require_once __DIR__ . '/routes/settings.php';
 
 // ── Router setup ─────────────────────────────────────────────────────────────
 $router = new Router();
@@ -91,8 +92,9 @@ register_dashboard_routes($router);
 register_planning_routes($router);
 register_hitsquad_routes($router);
 register_briefing_routes($router);
-register_settings_routes($router);
+register_giveaway_routes($router);
 register_discord_routes($router);
+register_settings_routes($router);
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

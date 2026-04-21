@@ -167,80 +167,31 @@ class Database {
             );
         ");
 
-        // App-wide settings (key/value store)
+        // Giveaways
         $db->exec("
-            CREATE TABLE IF NOT EXISTS app_settings (
-                key        TEXT PRIMARY KEY,
-                value      TEXT NOT NULL,
-                updated_by INTEGER REFERENCES admins(id),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-        ");
-
-        // Test-mode override data (mirrors production tables, isolated)
-        $db->exec("
-            CREATE TABLE IF NOT EXISTS test_events (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                title      TEXT NOT NULL,
-                description TEXT,
-                start_time TEXT,
-                end_time   TEXT,
-                status     TEXT DEFAULT 'upcoming',
-                banner_url TEXT,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-            CREATE TABLE IF NOT EXISTS test_partners (
+            CREATE TABLE IF NOT EXISTS giveaways (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                name          TEXT NOT NULL,
-                type          TEXT NOT NULL,
-                status        TEXT DEFAULT 'pending',
-                website       TEXT,
-                logo_url      TEXT,
+                title         TEXT    NOT NULL,
                 description   TEXT,
-                contact_email TEXT,
-                created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+                prizes        TEXT    NOT NULL DEFAULT '[]',
+                eligible_cids TEXT    NOT NULL DEFAULT '[]',
+                status        TEXT    NOT NULL DEFAULT 'upcoming',
+                winner_cid    TEXT,
+                winner_name   TEXT,
+                winner_prize  TEXT,
+                created_by    INTEGER REFERENCES admins(id),
+                created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+                updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
             );
-            CREATE TABLE IF NOT EXISTS test_airlines (
+            CREATE TABLE IF NOT EXISTS giveaway_entries (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                name        TEXT NOT NULL,
-                icao        TEXT NOT NULL,
-                callsign    TEXT,
-                status      TEXT DEFAULT 'active',
-                logo_url    TEXT,
-                pilot_count INTEGER DEFAULT 0,
-                description TEXT,
-                created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-            CREATE TABLE IF NOT EXISTS test_planning (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                name       TEXT NOT NULL,
-                role       TEXT,
-                cid        TEXT,
-                photo_url  TEXT,
-                bio        TEXT,
-                subsection TEXT NOT NULL DEFAULT 'other',
-                sort_order INTEGER DEFAULT 0,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-            CREATE TABLE IF NOT EXISTS test_hitsquad (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                name       TEXT NOT NULL,
-                role       TEXT,
-                cid        TEXT,
-                photo_url  TEXT,
-                bio        TEXT,
-                sort_order INTEGER DEFAULT 0,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                giveaway_id INTEGER NOT NULL REFERENCES giveaways(id) ON DELETE CASCADE,
+                cid         TEXT    NOT NULL,
+                name        TEXT,
+                entered_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+                UNIQUE(giveaway_id, cid)
             );
         ");
-
-        // Seed default settings
-        $db->exec("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('test_mode', '0')");
 
         // ── Bootstrap allowed CIDs ────────────────────────────────────────────
         $bootstrapCids = [
