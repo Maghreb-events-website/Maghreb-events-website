@@ -132,7 +132,7 @@ ME.auth = {
     const hydrated = ME.auth.hydrateUserFromToken();
     for (const apiBase of ME.API_CANDIDATES || [ME.API]) {
       try {
-        const res = await fetch(`${apiBase}/auth/me`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const res = await fetch(`${apiBase}/auth/me`, { headers: { 'Authorization': 'Bearer ' + token, 'X-Auth-Token': 'Bearer ' + token } });
         if (res.status === 401) {
           // Keep current token-derived session state even if /auth/me is blocked
           // by environment/CORS quirks (common in file:// style usage).
@@ -154,7 +154,7 @@ ME.auth = {
   },
   headers() {
     const t = ME.auth.token();
-    return t ? { 'Authorization': 'Bearer ' + t } : {};
+    return t ? { 'Authorization': 'Bearer ' + t, 'X-Auth-Token': 'Bearer ' + t } : {};
   },
   startVatsimOAuth() {
     if (!ME.VATSIM.CLIENT_ID || ME.VATSIM.CLIENT_ID === 'YOUR_SANDBOX_CLIENT_ID') {

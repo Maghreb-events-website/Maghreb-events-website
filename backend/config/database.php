@@ -242,6 +242,56 @@ class Database {
         // Seed default settings
         $db->exec("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('test_mode', '0')");
 
+        // ── Bootstrap allowed CIDs ────────────────────────────────────────────
+        $bootstrapCids = [
+            ['1635257',  'Project owner'],
+            ['1797446',  'Project owner'],
+            ['10000000', 'VATSIM sandbox'],
+            ['10000001', 'VATSIM sandbox'],
+            ['10000002', 'VATSIM sandbox'],
+            ['10000003', 'VATSIM sandbox'],
+            ['10000004', 'VATSIM sandbox'],
+            ['10000005', 'VATSIM sandbox'],
+            ['10000006', 'VATSIM sandbox'],
+            ['10000007', 'VATSIM sandbox'],
+            ['10000008', 'VATSIM sandbox'],
+            ['10000009', 'VATSIM sandbox'],
+        ];
+        $seedCid = $db->prepare("INSERT OR IGNORE INTO allowed_cids (cid, note) VALUES (?, ?)");
+        foreach ($bootstrapCids as [$cid, $note]) {
+            $seedCid->execute([$cid, $note]);
+        }
+
+        // ── Seed all allowed CIDs into admins table ──────────────────────────────
+        // Placeholder rows updated on first real VATSIM login.
+        // Random unusable password — login is VATSIM OAuth only.
+        $allAdminCids = [
+            ['1635257',  'Owner (1635257)',          'admin'],
+            ['1797446',  'Owner (1797446)',          'admin'],
+            ['10000000', 'Sandbox Admin (10000000)', 'admin'],
+            ['10000001', 'Sandbox Admin (10000001)', 'admin'],
+            ['10000002', 'Sandbox Admin (10000002)', 'admin'],
+            ['10000003', 'Sandbox Admin (10000003)', 'admin'],
+            ['10000004', 'Sandbox Admin (10000004)', 'admin'],
+            ['10000005', 'Sandbox Admin (10000005)', 'admin'],
+            ['10000006', 'Sandbox Admin (10000006)', 'admin'],
+            ['10000007', 'Sandbox Admin (10000007)', 'admin'],
+            ['10000008', 'Sandbox Admin (10000008)', 'admin'],
+            ['10000009', 'Sandbox Admin (10000009)', 'admin'],
+        ];
+        $randomPw = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT);
+        $seedAdmin = $db->prepare("
+            INSERT OR IGNORE INTO admins (cid, name, email, password, role)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        foreach ($allAdminCids as [$cid, $name, $role]) {
+            $seedAdmin->execute([$cid, $name, "cid{$cid}@vatsim.placeholder", $randomPw, $role]);
+        }
+
+        // Upgrade any existing rows stuck at 'user' role to 'admin'
+        $allCids = "'1635257','1797446','10000000','10000001','10000002','10000003','10000004','10000005','10000006','10000007','10000008','10000009'";
+        $db->exec("UPDATE admins SET role = 'admin' WHERE cid IN ($allCids) AND role = 'user'");
+
         // Migration: add subsection column to planning_team for older deployments.
         // SQLite ignores 'IF NOT EXISTS' on ADD COLUMN, so we check pragma first.
         try {
@@ -268,16 +318,6 @@ class Database {
             foreach ($defaultCids as $c) { $ins->execute([$c]); }
         } catch (\Throwable $e) {
             // Table may not exist yet on first deploy — will be created above
-        }
-
-        // Seed default admin if none exists
-        $count = $db->query("SELECT COUNT(*) FROM admins")->fetchColumn();
-        if ($count == 0) {
-            $hash = password_hash('admin1234', PASSWORD_BCRYPT);
-            $db->prepare("
-                INSERT INTO admins (cid, name, email, password, role)
-                VALUES (?, ?, ?, ?, ?)
-            ")->execute(['10000004', 'Admin User', 'admin@maghrebevents.com', $hash, 'superadmin']);
         }
 
         // Seed demo data

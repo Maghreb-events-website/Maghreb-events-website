@@ -6,7 +6,9 @@ $origin  = $_SERVER['HTTP_ORIGIN'] ?? '';
 $allowed = [
     'https://jamie-datson.com',
     'https://www.jamie-datson.com',
+    'https://webapi.jamie-datson.com',
     'http://localhost',
+    'http://localhost:3000',
     'http://127.0.0.1',
 ];
 
@@ -17,7 +19,7 @@ if (in_array($origin, $allowed, true)) {
 }
 
 header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Auth-Token, X-Requested-With');
 header('Access-Control-Allow-Credentials: true');
 header('Vary: Origin');
 header('Content-Type: application/json; charset=UTF-8');
@@ -66,6 +68,7 @@ require_once __DIR__ . '/routes/dashboard.php';
 require_once __DIR__ . '/routes/people.php';
 require_once __DIR__ . '/routes/briefing.php';
 require_once __DIR__ . '/routes/settings.php';
+require_once __DIR__ . '/routes/discord.php';
 
 // ── Router setup ─────────────────────────────────────────────────────────────
 $router = new Router();
@@ -89,6 +92,7 @@ register_planning_routes($router);
 register_hitsquad_routes($router);
 register_briefing_routes($router);
 register_settings_routes($router);
+register_discord_routes($router);
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);

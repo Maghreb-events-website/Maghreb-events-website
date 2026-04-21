@@ -117,9 +117,9 @@
 <main class="min-h-screen pt-16 pb-24 md:pb-12">
 <!-- Hero Section with Aviation Timelapse Simulation -->
 <section class="relative w-full h-[751px] flex flex-col items-center justify-center overflow-hidden">
-<!-- Simulated Timelapse Background -->
+<!-- GIF Background -->
 <div class="absolute inset-0 z-0">
-<img alt="" class="w-full h-full object-cover opacity-30 grayscale" data-alt="long exposure night aerial shot of a busy airport runway with glowing light trails from departing aircraft in deep blue and gold tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4SYuO3C2QubJoKIcL8TfB_QuKDWu0KzvnhwSW_Acn8M-ES1S9yTpaxfn3RyknbENbkbGcHZ_1_uY4uAIK2_BULhxhKpZ8kzYi7QSU1qTRa5wFEwVKMbO6wth5fDsmd5g-4Er-Z7Sl5NAgTxM2znD8c4Wlsh6puv1UK-ddwDr3ooR_w65L51alJsZAGUWquvmazcLUP2b88s0BlWly4sPdkO2TpzjhlLkuTF4zQ9Q0g8Hyvhw3NBe-HhPGyFwz964Vuit3SyW6eGk"/>
+<img alt="" class="w-full h-full object-cover" src="https://cdn.discordapp.com/attachments/1346041838527840256/1496082398478205039/Sequence-02.gif?ex=69e896cf&is=69e7454f&hm=ffb2f46ca6d90b4931f01f6c46820bd14d5594e189105dc0df4db99fd079548e&" style="object-fit:cover;width:100%;height:100%;opacity:0.45;"/>
 <div class="absolute inset-0 hero-gradient"></div>
 <div class="absolute inset-0 bg-gradient-to-b from-surface/0 via-surface/40 to-surface"></div>
 </div>
@@ -276,10 +276,13 @@ function tmToast(msg) {
   setTimeout(() => t.remove(), 2400);
 }
 function tmApi(path, method, body) {
+  const token = localStorage.getItem('me_token');
+  const headers = {'Content-Type': 'application/json'};
+  if (token) headers['Authorization'] = 'Bearer ' + token;
   return fetch(ME.API + path, {
-    method, headers: {'Content-Type':'application/json'},
+    method, headers,
     body: body ? JSON.stringify(body) : undefined
-  }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.message || r.statusText); return j; });
+  }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || j.message || r.statusText); return j; });
 }
 function tmFab(label, onClick) {
   const b = document.createElement('button');
@@ -302,6 +305,8 @@ let _TM = false;
       {name:'banner_url',  label:'Banner URL'},
     ];
     tmFab('Add Test Event', () => tmModal('Add Test Event', FIELDS, async body => {
+      if (body.start_time) body.start_time = body.start_time.replace('T', ' ');
+      if (body.end_time)   body.end_time   = body.end_time.replace('T', ' ');
       await tmApi('/test-events','POST',body); tmToast('Event added'); loadAndRunCountdowns();
     }));
   }

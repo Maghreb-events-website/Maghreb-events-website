@@ -4,7 +4,7 @@ function register_admin_routes(Router $router): void {
 
     // GET /api/admins  (superadmin only)
     $router->get('/api/admins', function() {
-        Auth::requireRole('superadmin');
+        Auth::requireRole('admin');
         $db     = Database::getInstance();
         $page   = $_GET['page'] ?? 1;
         $per    = $_GET['per']  ?? 20;
@@ -21,7 +21,7 @@ function register_admin_routes(Router $router): void {
 
     // POST /api/admins  (superadmin only)
     $router->post('/api/admins', function() {
-        $payload = Auth::requireRole('superadmin');
+        $payload = Auth::requireRole('admin');
         $db      = Database::getInstance();
         $body    = body();
         require_fields($body, ['cid', 'name', 'email', 'password']);
@@ -54,7 +54,7 @@ function register_admin_routes(Router $router): void {
 
     // DELETE /api/admins/:id  (superadmin only)
     $router->delete('/api/admins/:id', function(array $params) {
-        $payload = Auth::requireRole('superadmin');
+        $payload = Auth::requireRole('admin');
 
         if ((int)$params['id'] === (int)$payload['sub']) {
             json_error('Cannot delete your own account', 400);
@@ -73,7 +73,7 @@ function register_admin_routes(Router $router): void {
 
     // GET /api/audit-log
     $router->get('/api/audit-log', function() {
-        Auth::requireRole('superadmin');
+        Auth::requireRole('admin');
         $db   = Database::getInstance();
         $page = $_GET['page'] ?? 1;
         $per  = $_GET['per']  ?? 50;

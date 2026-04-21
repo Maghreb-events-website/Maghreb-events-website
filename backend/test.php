@@ -188,3 +188,57 @@ if ($admins) {
 echo "<hr style='border-color:#333;margin:28px 0'>
 <p style='color:#6b7280;font-size:12px'>⚠️ Delete test.php once working — no authentication on this page.</p>
 </body></html>";
+
+
+// ── Auth debug endpoint — add ?action=auth_debug&token=YOUR_TOKEN ──────────
+if (($_GET['action'] ?? '') === 'auth_debug') {
+    header('Content-Type: application/json');
+    $token = trim($_GET['token'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? '');
+    if (str_starts_with($token, 'Bearer ')) $token = substr($token, 7);
+
+    // Collect every possible place the Authorization header could appear
+    $allHeaders = [];
+    if (function_exists('getallheaders')) $allHeaders = getallheaders() ?: [];
+    if (function_exists('apache_request_headers')) {
+        foreach ((apache_request_headers() ?: []) as $k => $v) $allHeaders["apache_$k"] = $v;
+    }
+
+    $serverAuth = [];
+    foreach ($_SERVER as $k => $v) {
+        if (stripos($k, 'auth') !== false || stripos($k, 'http_') === 0) {
+            $serverAuth[$k] = $v;
+        }
+    }
+
+    // Try to verify the token with the current secret
+    $jwtSecret = defined('JWT_SECRET') ? JWT_SECRET : 'MAGHREB_EVENTS_SECRET_KEY_CHANGE_IN_PROD_2024';
+    $b64urlDecode = fn($d) => base64_decode(strtr($d, '-_', '+/') . str_repeat('=', (4 - strlen($d) % 4) % 4));
+    $b64url = fn($d) => rtrim(strtr(base64_encode($d), '+/', '-_'), '=');
+
+    $tokenResult = ['provided' => $token !== '', 'token_preview' => $token ? substr($token, 0, 20) . '…' : '(none)'];
+    if ($token) {
+        $parts = explode('.', $token);
+        if (count($parts) === 3) {
+            [$h, $b, $sig] = $parts;
+            $expected = $b64url(hash_hmac('sha256', "$h.$b", $jwtSecret, true));
+            $tokenResult['sig_match'] = hash_equals($expected, $sig);
+            $payload = json_decode($b64urlDecode($b), true);
+            $tokenResult['expired']   = $payload ? ($payload['exp'] < time()) : null;
+            $tokenResult['exp_human'] = $payload ? date('c', $payload['exp']) : null;
+            $tokenResult['payload']   = $payload;
+        } else {
+            $tokenResult['error'] = 'not 3 parts';
+        }
+    }
+
+    echo json_encode([
+        'jwt_secret_source'  => defined('JWT_SECRET') ? 'vatsim_config.php' : 'HARDCODED_DEFAULT',
+        'jwt_secret_preview' => substr($jwtSecret, 0, 8) . '…',
+        'token_check'        => $tokenResult,
+        'auth_headers'       => $allHeaders,
+        'server_auth_keys'   => $serverAuth,
+        'php_sapi'           => PHP_SAPI,
+        'server_software'    => $_SERVER['SERVER_SOFTWARE'] ?? 'unknown',
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
