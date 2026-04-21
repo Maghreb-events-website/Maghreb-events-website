@@ -109,9 +109,6 @@
 </head>
 <body class="bg-surface text-on-surface selection:bg-primary/30 selection:text-primary" data-active-nav="home">
 <!-- Test Mode Banner -->
-<div id="tm-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#92400e;color:#fef3c7;text-align:center;padding:8px 16px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #b45309">
-  <span style="margin-right:8px">⚠</span>TEST MODE — This data is not live. For testing purposes only.<span style="margin-left:8px">⚠</span>
-</div>
 <!-- TopAppBar -->
 
 <main class="min-h-screen pt-16 pb-24 md:pb-12">
@@ -231,85 +228,8 @@
 <script>
 const API = ME.API;
 
-/* ── Test-mode modal/toast helpers ──────────────────────────────────────── */
-function tmModal(title, fields, onSave) {
-  document.getElementById('tm-modal-bd')?.remove();
-  const bd = document.createElement('div');
-  bd.id = 'tm-modal-bd';
-  bd.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px';
-  const rows = fields.map(f => {
-    if (f.type === 'textarea') return `<div style="display:flex;flex-direction:column;gap:4px"><label style="font-size:12px;color:#9ca3af">${f.label}</label><textarea name="${f.name}" rows="3" style="background:#1a2025;border:1px solid #374151;border-radius:6px;padding:8px 10px;color:#dee3e9;font-size:13px;resize:vertical;width:100%;box-sizing:border-box"></textarea></div>`;
-    if (f.type === 'select') return `<div style="display:flex;flex-direction:column;gap:4px"><label style="font-size:12px;color:#9ca3af">${f.label}</label><select name="${f.name}" style="background:#1a2025;border:1px solid #374151;border-radius:6px;padding:8px 10px;color:#dee3e9;font-size:13px;width:100%">${f.options.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>`;
-    return `<div style="display:flex;flex-direction:column;gap:4px"><label style="font-size:12px;color:#9ca3af">${f.label}</label><input type="${f.type||'text'}" name="${f.name}" ${f.required?'required':''} style="background:#1a2025;border:1px solid #374151;border-radius:6px;padding:8px 10px;color:#dee3e9;font-size:13px;width:100%;box-sizing:border-box"/></div>`;
-  }).join('');
-  bd.innerHTML = `<div style="background:#111820;border:1px solid #374151;border-radius:12px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <h3 style="margin:0;font-size:16px;font-weight:600;color:#dee3e9">${title}</h3>
-      <button id="tm-mc" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:22px;line-height:1;padding:0">×</button>
-    </div>
-    <form id="tm-mf" style="display:flex;flex-direction:column;gap:14px">
-      ${rows}
-      <p id="tm-me" style="color:#f87171;font-size:12px;margin:0;display:none"></p>
-      <div style="display:flex;gap:10px;margin-top:4px">
-        <button type="submit" id="tm-ms" style="flex:1;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer">Save</button>
-        <button type="button" id="tm-mcc" style="flex:1;background:#1a2025;color:#9ca3af;border:1px solid #374151;border-radius:8px;padding:10px;font-size:13px;cursor:pointer">Cancel</button>
-      </div>
-    </form>
-  </div>`;
-  document.body.appendChild(bd);
-  const close = () => bd.remove();
-  bd.querySelector('#tm-mc').onclick = close;
-  bd.querySelector('#tm-mcc').onclick = close;
-  bd.addEventListener('click', e => { if (e.target === bd) close(); });
-  bd.querySelector('#tm-mf').onsubmit = async e => {
-    e.preventDefault();
-    const btn = bd.querySelector('#tm-ms'), errEl = bd.querySelector('#tm-me');
-    btn.disabled = true; btn.textContent = 'Saving…'; errEl.style.display = 'none';
-    try { await onSave(Object.fromEntries(new FormData(e.target).entries())); close(); }
-    catch(err) { btn.disabled = false; btn.textContent = 'Save'; errEl.textContent = err.message; errEl.style.display = 'block'; }
-  };
-}
-function tmToast(msg) {
-  const t = Object.assign(document.createElement('div'), {textContent: msg});
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#2563eb;color:#fff;padding:8px 20px;border-radius:8px;font-size:13px;z-index:10001;pointer-events:none;white-space:nowrap';
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2400);
-}
-function tmApi(path, method, body) {
-  const token = localStorage.getItem('me_token');
-  const headers = {'Content-Type': 'application/json'};
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-  return fetch(ME.API + path, {
-    method, headers,
-    body: body ? JSON.stringify(body) : undefined
-  }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || j.message || r.statusText); return j; });
-}
-function tmFab(label, onClick) {
-  const b = document.createElement('button');
-  b.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;vertical-align:-3px">add</span> ' + label;
-  b.style.cssText = 'position:fixed;bottom:28px;right:24px;z-index:9998;background:#2563eb;color:#fff;border:none;border-radius:999px;padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 24px rgba(0,0,0,.5)';
-  b.onclick = onClick;
-  document.body.appendChild(b);
-}
-/* Events-page test mode init */
-let _TM = false;
+/* Events-page init */
 (async () => {
-  try { const r = await fetch(API+'/settings/test-mode'); if(r.ok){const j=await r.json();_TM=!!j.test_mode;} } catch(e){}
-  if (_TM) { document.getElementById('tm-banner').style.display='block'; document.body.style.paddingTop='38px';
-    const FIELDS = [
-      {name:'title',       label:'Title *',       required:true},
-      {name:'description', label:'Description',   type:'textarea'},
-      {name:'start_time',  label:'Start Time *',  required:true, type:'datetime-local'},
-      {name:'end_time',    label:'End Time *',    required:true, type:'datetime-local'},
-      {name:'status',      label:'Status',        type:'select', options:['upcoming','active','completed','cancelled']},
-      {name:'banner_url',  label:'Banner URL'},
-    ];
-    tmFab('Add Test Event', () => tmModal('Add Test Event', FIELDS, async body => {
-      if (body.start_time) body.start_time = body.start_time.replace('T', ' ');
-      if (body.end_time)   body.end_time   = body.end_time.replace('T', ' ');
-      await tmApi('/test-events','POST',body); tmToast('Event added'); loadAndRunCountdowns();
-    }));
-  }
   loadAndRunCountdowns();
 })();
 
@@ -317,7 +237,7 @@ let _TM = false;
 // ── Countdowns ──────────────────────────────────────────────────────────────
 async function loadAndRunCountdowns() {
     try {
-        const res = await fetch(`${API}/${_TM?"test-events":"events"}?per=100`);
+        const res = await fetch(`${API}/events?per=100`);
         const json = await res.json();
         const all = json.data || json;
 
@@ -387,7 +307,7 @@ document.getElementById('briefing-btn').addEventListener('click', async () => {
         </div>`;
 
     try {
-        const res = await fetch(`${API}/${_TM?"test-events":"events"}`);
+        const res = await fetch(`${API}/events`);
         const json = await res.json();
         const events = json.data || json;
 
@@ -440,7 +360,5 @@ function formatDateTime(str) {
 const style = document.createElement('style');
 style.textContent = `@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`;
 document.head.appendChild(style);
-
-// Init triggered above inside test-mode IIFE
 </script>
 </body></html>

@@ -183,6 +183,7 @@ ME.nav = {
     { href: '/planning', label: 'Planning Team', key: 'planning' },
     { href: '/hitsquad', label: 'Hitsquad',      key: 'hitsquad' },
     { href: '/briefing', label: 'Pilot Briefing', key: 'briefing' },
+    { href: '/giveaway', label: 'Giveaways',      key: 'giveaway' },
   ],
   inject(activeKey) {
 
