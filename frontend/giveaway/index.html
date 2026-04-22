@@ -427,5 +427,17 @@ async function enterGiveaway(id, btn) {
     btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">redeem</span> Enter Giveaway';
   }
 }
+function winnerHTML(g) {
+  if (g.status !== 'drawn' || !g.winner_cid || g.hide_name === true) return '';
+  
+  return `<div class="winner-card" style="margin-top:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:22px">🏆</span>
+      <span style="font-size:14px;font-weight:600;color:#a78bfa">Winner Announced</span>
+    </div>
+    <p style="font-size:15px;font-weight:600;color:var(--me-fg);margin:0 0 4px">Winner Protected</p>
+    <p style="font-size:12px;color:var(--me-fg-muted);margin:0 0 8px;font-family:monospace">Identity Hidden</p>
+  </div>`;
+}
 </script>
 </body></html>
