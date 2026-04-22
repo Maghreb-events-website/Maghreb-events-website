@@ -34,7 +34,7 @@
 </script>
 <style>
   .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-  body { background-color:#0f1418; color:#dee3e9; font-family:'Inter',sans-serif; min-height:max(884px,100dvh); }
+  body { background-color:var(--me-bg); color:var(--me-fg); font-family:'Inter',sans-serif; min-height:max(884px,100dvh); }
 
   @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
   @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
@@ -42,8 +42,8 @@
   @keyframes winner-reveal { 0%{opacity:0;transform:scale(0.85) translateY(20px)} 60%{transform:scale(1.04) translateY(-4px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
 
   .giveaway-card {
-    background: #171c20;
-    border: 1px solid #3e4850;
+    background: var(--me-bg-elev);
+    border: 1px solid var(--me-border);
     border-radius: 12px;
     padding: 28px;
     transition: border-color 0.2s, box-shadow 0.2s;
@@ -119,7 +119,7 @@
 
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(12px);
-    background: #252b2f; color: #dee3e9; border: 1px solid #3e4850;
+    background: var(--me-bg-elev-3); color: var(--me-fg); border: 1px solid var(--me-border);
     padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 9999;
     opacity: 0; transition: all .25s; pointer-events: none;
     display: flex; align-items: center; gap: 8px; white-space: nowrap;
@@ -152,8 +152,8 @@
   <div id="auth-banner" class="auth-banner" style="display:none">
     <span class="material-symbols-outlined text-primary" style="font-size:22px;flex-shrink:0">info</span>
     <div style="flex:1">
-      <p style="font-size:14px;font-weight:500;color:#dee3e9;margin:0 0 2px">Sign in required to enter</p>
-      <p style="font-size:13px;color:#bec8d2;margin:0">You need a VATSIM account to participate in giveaways.</p>
+      <p style="font-size:14px;font-weight:500;margin:0 0 2px">Sign in required to enter</p>
+      <p style="font-size:13px;margin:0">You need a VATSIM account to participate in giveaways.</p>
     </div>
     <a href="/login" class="login-btn" style="width:auto;white-space:nowrap">
       <span class="material-symbols-outlined" style="font-size:16px">login</span>
@@ -244,7 +244,7 @@ function statusDot(s) {
 function prizesHTML(prizes) {
   if (!prizes || !prizes.length) return '';
   return `<div style="margin-top:14px">
-    <p style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#88929b;margin:0 0 8px">Prize Pool</p>
+    <p style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--me-fg-dim);margin:0 0 8px">Prize Pool</p>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       ${prizes.map(p => `<span class="prize-chip"><span class="material-symbols-outlined" style="font-size:13px">emoji_events</span>${escHtml(p)}</span>`).join('')}
     </div>
@@ -258,8 +258,8 @@ function winnerHTML(g) {
       <span style="font-size:22px">🏆</span>
       <span style="font-size:14px;font-weight:600;color:#a78bfa">Winner Announced</span>
     </div>
-    <p style="font-size:15px;font-weight:600;color:#dee3e9;margin:0 0 4px">${escHtml(g.winner_name || g.winner_cid)}</p>
-    <p style="font-size:12px;color:#bec8d2;margin:0 0 8px;font-family:monospace">CID ${escHtml(g.winner_cid)}</p>
+    <p style="font-size:15px;font-weight:600;color:var(--me-fg);margin:0 0 4px">${escHtml(g.winner_name || g.winner_cid)}</p>
+    <p style="font-size:12px;color:var(--me-fg-muted);margin:0 0 8px;font-family:monospace">CID ${escHtml(g.winner_cid)}</p>
     ${g.winner_prize ? `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,184,110,.1);border:1px solid rgba(255,184,110,.2);border-radius:6px;padding:5px 12px;font-size:13px;color:#ffb86e">
       <span class="material-symbols-outlined" style="font-size:15px">emoji_events</span> ${escHtml(g.winner_prize)}
     </div>` : ''}
@@ -268,7 +268,7 @@ function winnerHTML(g) {
 
 function entryCountHTML(count, status) {
   if (status === 'upcoming') return '';
-  return `<p style="font-size:12px;color:#88929b;margin:12px 0 0">
+  return `<p style="font-size:12px;color:var(--me-fg-dim);margin:12px 0 0">
     <span class="material-symbols-outlined" style="font-size:14px;vertical-align:-3px">group</span>
     ${count} ${count === 1 ? 'entry' : 'entries'} submitted
   </p>`;
@@ -282,7 +282,7 @@ function escHtml(str) {
 function actionHTML(g) {
   if (g.status === 'upcoming') {
     return `<div style="margin-top:20px;padding:12px 16px;background:rgba(137,206,255,.05);border:1px solid rgba(137,206,255,.1);border-radius:8px;text-align:center">
-      <p style="font-size:13px;color:#bec8d2;margin:0">
+      <p style="font-size:13px;color:var(--me-fg-muted);margin:0">
         <span class="material-symbols-outlined" style="font-size:15px;vertical-align:-3px;color:#89ceff">schedule</span>
         This giveaway isn't open yet. Check back soon.
       </p>
@@ -291,7 +291,7 @@ function actionHTML(g) {
 
   if (g.status === 'closed') {
     return `<div style="margin-top:20px;padding:12px 16px;background:rgba(255,184,110,.05);border:1px solid rgba(255,184,110,.1);border-radius:8px;text-align:center">
-      <p style="font-size:13px;color:#bec8d2;margin:0">
+      <p style="font-size:13px;color:var(--me-fg-muted);margin:0">
         <span class="material-symbols-outlined" style="font-size:15px;vertical-align:-3px;color:#ffb86e">lock</span>
         Entries are now closed. The winner will be announced shortly.
       </p>
@@ -324,7 +324,7 @@ function actionHTML(g) {
       <span class="material-symbols-outlined" style="font-size:16px">redeem</span>
       Enter Giveaway
     </button>
-    <p style="font-size:11px;color:#88929b;text-align:center;margin:8px 0 0">
+    <p style="font-size:11px;color:var(--me-fg-dim);text-align:center;margin:8px 0 0">
       Entering as CID ${escHtml(ME_USER.cid)} · Eligibility verified at draw time
     </p>
   </div>`;
@@ -332,14 +332,14 @@ function actionHTML(g) {
 
 // ─── Render a single giveaway card ─────────────────────────────────────────
 function giveawayCard(g, delay) {
-  return `<div class="giveaway-card status-${g.status}" style="animation-delay:${delay}ms">
+  return `<div class="giveaway-card" style="animation-delay:${delay}ms">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">
       <div>
         <span class="status-pill ${g.status}">${statusDot(g.status)}${statusLabel(g.status)}</span>
       </div>
     </div>
-    <h3 style="font-family:'Manrope',sans-serif;font-size:22px;font-weight:500;color:#dee3e9;margin:0 0 6px">${escHtml(g.title)}</h3>
-    ${g.description ? `<p style="font-size:14px;color:#bec8d2;line-height:1.6;margin:0">${escHtml(g.description)}</p>` : ''}
+    <h3 style="font-family:'Manrope',sans-serif;font-size:22px;font-weight:500;color:var(--me-fg);margin:0 0 6px">${escHtml(g.title)}</h3>
+    ${g.description ? `<p style="font-size:14px;color:var(--me-fg-muted);line-height:1.6;margin:0">${escHtml(g.description)}</p>` : ''}
     ${prizesHTML(g.prizes)}
     ${winnerHTML(g)}
     ${actionHTML(g)}
@@ -358,8 +358,8 @@ async function loadGiveaways() {
 
     if (!items.length) {
       container.innerHTML = `<div style="text-align:center;padding:60px 0">
-        <span class="material-symbols-outlined" style="font-size:48px;color:#3e4850;display:block;margin-bottom:12px">redeem</span>
-        <p style="color:#88929b;font-size:15px">No giveaways yet — check back soon.</p>
+        <span class="material-symbols-outlined" style="font-size:48px;color:var(--me-fg-dim);display:block;margin-bottom:12px">redeem</span>
+        <p style="color:var(--me-fg-muted);font-size:15px">No giveaways yet — check back soon.</p>
       </div>`;
       return;
     }
@@ -374,7 +374,7 @@ async function loadGiveaways() {
   } catch(e) {
     container.innerHTML = `<div style="padding:20px;border:1px solid rgba(252,165,165,.2);border-radius:8px;background:rgba(239,68,68,.05)">
       <p style="color:#fca5a5;font-weight:500;margin:0 0 4px">Unable to load giveaways</p>
-      <p style="color:#bec8d2;font-size:13px;margin:0">${escHtml(e.message)}</p>
+      <p style="color:var(--me-fg-muted);font-size:13px;margin:0">${escHtml(e.message)}</p>
     </div>`;
   }
 }

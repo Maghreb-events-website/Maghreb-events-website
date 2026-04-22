@@ -314,3 +314,13 @@ html.light #user-chip #user-chip-label {
 html.dark #user-chip #user-chip-label {
  color:#ffffff
 }
+
+html.light #auth-banner {
+ color:#000000
+}
+
+html.dark #auth-banner {
+ color:#ffffff
+}
+
+giveaway-card
