@@ -116,73 +116,97 @@
 <section class="relative w-full h-[751px] flex flex-col items-center justify-center overflow-hidden">
 <!-- GIF Background -->
 <div class="absolute inset-0 z-0">
-<img alt="" class="w-full h-full object-cover" src="https://cdn.jumpshare.com/preview/iQzrxlKff3ZajdYYCmzfARhP5cSnVHl5F8MIpzqD6s51q9tr7oPKtcM_cjRzFEJWaaKMCD9FM3-f2sfHYUioHERmaU0AYRCYtXsN3qQP1wU" style="object-fit:cover;width:100%;height:100%;opacity:0.45;"/>
+<img id="bg-gif" alt="" src="https://cdn.jumpshare.com/preview/iQzrxlKff3ZajdYYCmzfARhP5cSnVHl5F8MIpzqD6s51q9tr7oPKtcM_cjRzFEJWaaKMCD9FM3-f2sfHYUioHERmaU0AYRCYtXsN3qQP1wU" style="object-fit:cover;width:100%;height:100%;opacity:0.45;"/>
+<script>
+(function() {
+    const GIF_URL = 'https://cdn.jumpshare.com/preview/iQzrxlKff3ZajdYYCmzfARhP5cSnVHl5F8MIpzqD6s51q9tr7oPKtcM_cjRzFEJWaaKMCD9FM3-f2sfHYUioHERmaU0AYRCYtXsN3qQP1wU';
+    const img = document.getElementById('bg-gif');
+    let duration = null;
+    let startTime = null;
+
+    // Detect GIF duration by fetching and parsing the frame delays
+    async function getGifDuration(url) {
+        try {
+            const res = await fetch(url);
+            const buf = await res.arrayBuffer();
+            const data = new Uint8Array(buf);
+            let delay = 0;
+            for (let i = 0; i < data.length - 4; i++) {
+                // Graphic Control Extension block: 0x21 0xF9 0x04
+                if (data[i] === 0x21 && data[i+1] === 0xF9 && data[i+2] === 0x04) {
+                    delay += (data[i+4] | (data[i+5] << 8)) * 10; // centiseconds → ms
+                    i += 5;
+                }
+            }
+            return delay || null;
+        } catch { return null; }
+    }
+
+    function restartGif() {
+        img.src = GIF_URL + '?t=' + Date.now();
+        startTime = Date.now();
+    }
+
+    getGifDuration(GIF_URL).then(ms => {
+        if (!ms) { 
+            // Fallback: restart every 8 seconds if duration undetectable
+            ms = 8000;
+        }
+        duration = ms;
+        startTime = Date.now();
+        function loop() {
+            const elapsed = Date.now() - startTime;
+            if (elapsed >= duration - 200) {
+                restartGif();
+                setTimeout(loop, duration);
+            } else {
+                setTimeout(loop, duration - elapsed - 200);
+            }
+        }
+        setTimeout(loop, duration - 200);
+    });
+})();
+</script>
 <div class="absolute inset-0 hero-gradient"></div>
 <div class="absolute inset-0 bg-gradient-to-b from-surface/0 via-surface/40 to-surface"></div>
 </div>
 <!-- Content Canvas -->
-<div class="relative z-10 text-center max-w-4xl px-6">
-<span class="text-primary font-body text-xs uppercase tracking-[0.4em] mb-4 block">Regional Flight Operations</span>
-<h1 class="text-5xl md:text-7xl font-light tracking-tight mb-12 text-on-surface">Precision in Motion.</h1>
-<!-- Countdown Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-<!-- Event 1 -->
-<div class="bg-surface-container-low p-8 rounded-xl border-b-2 border-primary/20 flex flex-col items-center">
-<p class="text-on-surface-variant text-[10px] uppercase tracking-widest mb-4" id="event1-name">New Year's in Morocco</p>
-<div class="flex gap-4">
-<div class="flex flex-col items-center">
-<span class="text-3xl font-light text-on-surface" id="cd1-days">12</span>
-<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Days</span>
+<div class="relative z-10 text-center max-w-2xl mx-auto px-6 flex flex-col items-center">
+<span class="text-primary font-body text-xs uppercase tracking-[0.4em] mb-8 block">Regional Flight Operations</span>
+
+<!-- Typewriter welcome -->
+<div class="mb-12 h-[3.5rem] md:h-[4.5rem] flex items-center justify-center w-full">
+  <h1 id="welcome-text" class="text-3xl md:text-5xl font-light tracking-tight text-on-surface w-full" style="text-align:center; direction:ltr;">
+    <span id="typewriter-span"></span><span id="tw-cursor" style="display:inline-block;width:2px;height:0.85em;background:#dee3e9;margin-left:3px;vertical-align:middle;animation:blink 0.7s step-end infinite;opacity:1;"></span>
+  </h1>
 </div>
-<span class="text-3xl font-light text-outline-variant">:</span>
-<div class="flex flex-col items-center">
-<span class="text-3xl font-light text-on-surface" id="cd1-hrs">08</span>
-<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Hrs</span>
+
+<!-- Single Centered Countdown -->
+<div class="bg-surface-container-low p-10 rounded-xl border-b-2 border-primary/20 flex flex-col items-center w-full max-w-md mx-auto">
+  <p class="text-on-surface-variant text-[10px] uppercase tracking-widest mb-6" id="event1-name">New Year's in Morocco</p>
+  <div class="flex gap-6 justify-center">
+    <div class="flex flex-col items-center">
+      <span class="text-4xl font-light text-on-surface" id="cd1-days">--</span>
+      <span class="text-[9px] text-on-surface-variant uppercase tracking-tighter mt-1">Days</span>
+    </div>
+    <span class="text-4xl font-light text-outline-variant self-start mt-1">:</span>
+    <div class="flex flex-col items-center">
+      <span class="text-4xl font-light text-on-surface" id="cd1-hrs">--</span>
+      <span class="text-[9px] text-on-surface-variant uppercase tracking-tighter mt-1">Hrs</span>
+    </div>
+    <span class="text-4xl font-light text-outline-variant self-start mt-1">:</span>
+    <div class="flex flex-col items-center">
+      <span class="text-4xl font-light text-on-surface" id="cd1-min">--</span>
+      <span class="text-[9px] text-on-surface-variant uppercase tracking-tighter mt-1">Min</span>
+    </div>
+    <span class="text-4xl font-light text-outline-variant self-start mt-1">:</span>
+    <div class="flex flex-col items-center">
+      <span class="text-4xl font-light text-on-surface" id="cd1-sec">--</span>
+      <span class="text-[9px] text-on-surface-variant uppercase tracking-tighter mt-1">Sec</span>
+    </div>
+  </div>
 </div>
-<span class="text-3xl font-light text-outline-variant">:</span>
-<div class="flex flex-col items-center">
-<span class="text-3xl font-light text-on-surface" id="cd1-min">42</span>
-<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Min</span>
-</div>
-<span class="text-3xl font-light text-outline-variant">:</span>
-<div class="flex flex-col items-center">
-<span class="text-3xl font-light text-on-surface" id="cd1-sec">00</span>
-<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Sec</span>
-</div>
-</div>
-</div>
-<!-- Event 2 -->
-<div class="bg-surface-container-low p-8 rounded-xl border-b-2 border-secondary/20 flex flex-col items-center">
-<p class="text-on-surface-variant text-[10px] uppercase tracking-widest mb-4" id="event2-name">Cross Algeria</p>
-<div class="flex gap-4">
-<div class="flex flex-col items-center">
-<span class="text-3xl font-light text-on-surface" id="cd2-days">24</span>
-<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Days</span>
-</div>
-<span class="text-3xl font-light text-outline-variant">:</span>
-<div class="flex flex-col items-center">
-<span class="text-3xl font-light text-on-surface" id="cd2-hrs">14</span>
-<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Hrs</span>
-</div>
-<span class="text-3xl font-light text-outline-variant">:</span>
-<div class="flex flex-col items-center">
-<span class="text-3xl font-light text-on-surface" id="cd2-min">19</span>
-<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Min</span>
-</div>
-<span class="text-3xl font-light text-outline-variant">:</span>
-<div class="flex flex-col items-center">
-<span class="text-3xl font-light text-on-surface" id="cd2-sec">00</span>
-<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Sec</span>
-</div>
-</div>
-</div>
-</div>
-<!-- Actions -->
-<div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-<button id="briefing-btn" class="border border-outline-variant/30 text-primary px-10 py-4 rounded-md font-medium tracking-tight hover:bg-surface-container-high transition-all duration-300 w-full sm:w-auto">
-                    Event Briefing
-                </button>
-</div>
+
 </div>
 </section>
 </main>
@@ -247,28 +271,12 @@ async function loadAndRunCountdowns() {
             .filter(e => e.status === 'upcoming' || e.status === 'active')
             .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
-        const cd1El = document.getElementById('cd1-days').closest('div').parentElement;
-        const cd2El = document.getElementById('cd2-days').closest('div').parentElement;
-
         if (live[0]) {
             document.getElementById('event1-name').textContent = live[0].title;
             startCountdown('cd1', live[0].start_time);
-            cd1El.closest('[class*="bg-surface"]').style.display = '';
-        } else {
-            cd1El.closest('[class*="bg-surface"]').style.display = 'none';
-        }
-
-        if (live[1]) {
-            document.getElementById('event2-name').textContent = live[1].title;
-            startCountdown('cd2', live[1].start_time);
-            cd2El.closest('[class*="bg-surface"]').style.display = '';
-        } else {
-            cd2El.closest('[class*="bg-surface"]').style.display = 'none';
         }
     } catch {
-        // API unreachable — hide countdowns rather than show stale data
-        document.getElementById('event1-name').textContent = 'Upcoming Event';
-        document.getElementById('event2-name').textContent = 'Upcoming Event';
+        document.getElementById('event1-name').textContent = "New Year's in Morocco";
     }
 }
 
@@ -292,73 +300,67 @@ function startCountdown(prefix, isoTarget) {
     setInterval(tick, 1000);
 }
 
-// ── Event Briefing Modal ────────────────────────────────────────────────────
-const modal     = document.getElementById('briefing-modal');
-const modalBody = document.getElementById('modal-body');
-
-document.getElementById('briefing-btn').addEventListener('click', async () => {
-    modal.classList.add('open');
-
-    // Reset to loading state
-    modalBody.innerHTML = `
-        <div class="flex items-center gap-3 text-[#89ceff]">
-            <span class="material-symbols-outlined text-lg" style="animation:spin 0.8s linear infinite">progress_activity</span>
-            <span>Loading briefing data...</span>
-        </div>`;
-
-    try {
-        const res = await fetch(`${API}/events`);
-        const json = await res.json();
-        const events = json.data || json;
-
-        if (!events.length) {
-            modalBody.innerHTML = `<p class="text-[#bec8d2]">No events scheduled at this time.</p>`;
-            return;
-        }
-
-        modalBody.innerHTML = events.map(e => `
-            <div class="bg-[#1b2024] rounded-lg p-5 border-b-2 ${e.status === 'upcoming' ? 'border-[#89ceff]/20' : 'border-[#a5cbe9]/20'}">
-                <div class="flex items-center justify-between mb-2">
-                    <p class="font-['Manrope'] font-medium text-[#dee3e9] text-base">${e.title}</p>
-                    <span class="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full
-                        ${e.status === 'upcoming' ? 'bg-[#89ceff]/10 text-[#89ceff]' :
-                          e.status === 'active'   ? 'bg-green-500/10 text-green-400' :
-                                                    'bg-[#30353a] text-[#bec8d2]'}">${e.status}</span>
-                </div>
-                ${e.description ? `<p class="text-sm text-[#bec8d2] leading-relaxed mb-3">${e.description}</p>` : ''}
-                <div class="flex gap-6 text-xs text-[#88929b]">
-                    <span>🛫 ${formatDateTime(e.start_time)}</span>
-                    <span>🛬 ${formatDateTime(e.end_time)}</span>
-                </div>
-            </div>
-        `).join('');
-    } catch {
-        modalBody.innerHTML = `
-            <p class="text-[#bec8d2] text-sm">Unable to load live data. Showing cached briefing.</p>
-            <div class="bg-[#1b2024] rounded-lg p-5 border-b-2 border-[#89ceff]/20">
-                <p class="font-['Manrope'] font-medium text-[#dee3e9] mb-1">New Year's in Morocco</p>
-                <p class="text-sm text-[#bec8d2]">Celebrate the new year with a flight to Morocco. ATC coverage provided by Maghreb vACC.</p>
-            </div>
-            <div class="bg-[#1b2024] rounded-lg p-5 border-b-2 border-[#a5cbe9]/20">
-                <p class="font-['Manrope'] font-medium text-[#dee3e9] mb-1">Cross Algeria</p>
-                <p class="text-sm text-[#bec8d2]">Transit flight across the Algerian airspace with full DAAA FIR ATC coverage.</p>
-            </div>`;
-    }
-});
-
-document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('open'));
-modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.classList.remove('open'); });
-
-function formatDateTime(str) {
-    if (!str) return '—';
-    const d = new Date(str);
-    return d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'UTC' }) + ' UTC';
-}
-
-// Spin keyframe for loading icons
+// Keyframes
 const style = document.createElement('style');
-style.textContent = `@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`;
+style.textContent = `
+    @keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+`;
 document.head.appendChild(style);
+
+// Arabic font
+const fontLink = document.createElement('link');
+fontLink.rel = 'stylesheet';
+fontLink.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400&display=swap';
+document.head.appendChild(fontLink);
+
+// ── Typewriter Cycling ───────────────────────────────────────────────────────
+(function () {
+    const phrases = [
+        { text: "Welcome to New Years in Morocco",       dir: "ltr" },
+        { text: "مرحبا بكم في رأس السنة في المغرب",     dir: "rtl" },
+        { text: "Bienvenue au Nouvel An au Maroc",        dir: "ltr" },
+        { text: "Bienvenidos al Año Nuevo en Marruecos", dir: "ltr" }
+    ];
+
+    const span = document.getElementById('typewriter-span');
+    const h1   = document.getElementById('welcome-text');
+    let phraseIdx = 0;
+    let charIdx   = 0;
+    let deleting  = false;
+
+    function tick() {
+        const { text, dir } = phrases[phraseIdx];
+
+        h1.style.direction  = dir;
+        h1.style.textAlign  = dir === 'rtl' ? 'right' : 'center';
+        span.style.fontFamily = dir === 'rtl'
+            ? "'Noto Sans Arabic', 'Manrope', sans-serif"
+            : "'Manrope', sans-serif";
+
+        if (!deleting) {
+            charIdx++;
+            span.textContent = text.slice(0, charIdx);
+            if (charIdx === text.length) {
+                deleting = true;
+                setTimeout(tick, 2400);
+            } else {
+                setTimeout(tick, dir === 'rtl' ? 60 : 50);
+            }
+        } else {
+            charIdx--;
+            span.textContent = text.slice(0, charIdx);
+            if (charIdx === 0) {
+                deleting  = false;
+                phraseIdx = (phraseIdx + 1) % phrases.length;
+                setTimeout(tick, 380);
+            } else {
+                setTimeout(tick, 30);
+            }
+        }
+    }
+
+    setTimeout(tick, 700);
+})();
 </script>
 </body></html>
