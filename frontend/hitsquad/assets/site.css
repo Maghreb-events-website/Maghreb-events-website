@@ -305,3 +305,12 @@ html.light .me-header {
 /* ── Briefing page dark background fix ──────────────────────────────────── */
 body.me-page { background: var(--me-bg); color: var(--me-fg); min-height: 100vh; }
 html.light body.me-page { background: var(--me-bg); color: var(--me-fg); }
+
+
+html.light #user-chip #user-chip-label {
+ color:#000000
+}
+
+html.dark #user-chip #user-chip-label {
+ color:#ffffff
+}
