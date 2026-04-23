@@ -116,6 +116,7 @@
 <section class="relative w-full h-[751px] flex flex-col items-center justify-center overflow-hidden">
 <!-- GIF Background -->
 <div class="absolute inset-0 z-0">
+<<<<<<< Updated upstream:With Admin/frontend/index.html
 <img id="bg-gif" alt="" src="https://cdn.jumpshare.com/preview/iQzrxlKff3ZajdYYCmzfARhP5cSnVHl5F8MIpzqD6s51q9tr7oPKtcM_cjRzFEJWaaKMCD9FM3-f2sfHYUioHERmaU0AYRCYtXsN3qQP1wU" style="object-fit:cover;width:100%;height:100%;opacity:0.45;"/>
 <script>
 (function() {
@@ -167,10 +168,14 @@
     });
 })();
 </script>
+=======
+<img alt="" class="w-full h-full object-cover" src="assets/bg-img.gif" style="object-fit:cover;width:100%;height:100%;opacity:0.45;"/>
+>>>>>>> Stashed changes:frontend/index.html
 <div class="absolute inset-0 hero-gradient"></div>
 <div class="absolute inset-0 bg-gradient-to-b from-surface/0 via-surface/40 to-surface"></div>
 </div>
 <!-- Content Canvas -->
+<<<<<<< Updated upstream:With Admin/frontend/index.html
 <div class="relative z-10 text-center max-w-2xl mx-auto px-6 flex flex-col items-center">
 <span class="text-primary font-body text-xs uppercase tracking-[0.4em] mb-8 block">Regional Flight Operations</span>
 
@@ -207,6 +212,66 @@
   </div>
 </div>
 
+=======
+<div class="relative z-10 text-center max-w-4xl px-6">
+<span class="text-primary font-body text-xs uppercase tracking-[0.4em] mb-4 block">Welcome to Maghreb vACC</span>
+<h1 class="text-5xl md:text-7xl font-light tracking-tight mb-4 text-on-surface">
+  <span id="typing-text"></span><span id="typing-cursor" class="inline-block w-[2px] h-[1.2em] bg-primary align-middle ml-0.5 animate-pulse"></span>
+</h1>
+<!-- Countdown Grid -->
+<div class="flex flex-wrap justify-center gap-8 mb-16">
+<!-- Event 1 -->
+<div class="bg-surface-container-low p-8 rounded-xl border-b-2 border-primary/20 flex flex-col items-center">
+<p class="text-on-surface-variant text-[10px] uppercase tracking-widest mb-4" id="event1-name">New Year's in Morocco</p>
+<div class="flex gap-4">
+<div class="flex flex-col items-center">
+<span class="text-3xl font-light text-on-surface" id="cd1-days">12</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Days</span>
+</div>
+<span class="text-3xl font-light text-outline-variant">:</span>
+<div class="flex flex-col items-center">
+<span class="text-3xl font-light text-on-surface" id="cd1-hrs">08</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Hrs</span>
+</div>
+<span class="text-3xl font-light text-outline-variant">:</span>
+<div class="flex flex-col items-center">
+<span class="text-3xl font-light text-on-surface" id="cd1-min">42</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Min</span>
+</div>
+<span class="text-3xl font-light text-outline-variant">:</span>
+<div class="flex flex-col items-center">
+<span class="text-3xl font-light text-on-surface" id="cd1-sec">00</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Sec</span>
+</div>
+</div>
+</div>
+<!-- Event 2 -->
+<div class="bg-surface-container-low p-8 rounded-xl border-b-2 border-secondary/20 flex flex-col items-center">
+<p class="text-on-surface-variant text-[10px] uppercase tracking-widest mb-4" id="event2-name">Cross Algeria</p>
+<div class="flex gap-4">
+<div class="flex flex-col items-center">
+<span class="text-3xl font-light text-on-surface" id="cd2-days">24</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Days</span>
+</div>
+<span class="text-3xl font-light text-outline-variant">:</span>
+<div class="flex flex-col items-center">
+<span class="text-3xl font-light text-on-surface" id="cd2-hrs">14</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Hrs</span>
+</div>
+<span class="text-3xl font-light text-outline-variant">:</span>
+<div class="flex flex-col items-center">
+<span class="text-3xl font-light text-on-surface" id="cd2-min">19</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Min</span>
+</div>
+<span class="text-3xl font-light text-outline-variant">:</span>
+<div class="flex flex-col items-center">
+<span class="text-3xl font-light text-on-surface" id="cd2-sec">00</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Sec</span>
+</div>
+</div>
+</div>
+</div>
+>>>>>>> Stashed changes:frontend/index.html
 </div>
 </section>
 </main>
@@ -300,7 +365,44 @@ function startCountdown(prefix, isoTarget) {
     setInterval(tick, 1000);
 }
 
+<<<<<<< Updated upstream:With Admin/frontend/index.html
 // Keyframes
+=======
+
+// ── Typing Animation ────────────────────────────────────────────────────────
+(function() {
+  const text = 'Welcome to New Years in Morocco';
+  const el = document.getElementById('typing-text');
+  const cursor = document.getElementById('typing-cursor');
+  if (!el) return;
+  let i = 0;
+  function type() {
+    if (i <= text.length) {
+      el.textContent = text.slice(0, i);
+      i++;
+      setTimeout(type, 65);
+    } else {
+      // After typing completes, keep blinking cursor then pause and loop
+      setTimeout(() => {
+        let j = text.length;
+        function erase() {
+          if (j >= 0) {
+            el.textContent = text.slice(0, j);
+            j--;
+            setTimeout(erase, 35);
+          } else {
+            i = 0;
+            setTimeout(type, 800);
+          }
+        }
+        setTimeout(erase, 2500);
+      }, 100);
+    }
+  }
+  // Slight delay before starting
+  setTimeout(type, 600);
+})();
+>>>>>>> Stashed changes:frontend/index.html
 const style = document.createElement('style');
 style.textContent = `
     @keyframes spin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
