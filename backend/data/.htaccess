@@ -1,0 +1,4 @@
+# Block ALL direct HTTP access to this directory.
+# Database files must NEVER be served over the web.
+Order deny,allow
+Deny from all

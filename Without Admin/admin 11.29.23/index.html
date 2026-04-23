@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Panel | Maghreb Events</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode:"class",
+  theme:{ extend:{ colors:{
+    "on-surface":"#dee3e9","surface":"#0f1418","surface-container-lowest":"#0a0f13",
+    "surface-container-low":"#171c20","secondary":"#a5cbe9","surface-tint":"#89ceff",
+    "tertiary":"#ffb86e","surface-variant":"#30353a","secondary-container":"#234b64",
+    "outline":"#88929b","on-surface-variant":"#bec8d2","inverse-surface":"#dee3e9",
+    "primary":"#0ea5e9","surface-container":"#1b2024","on-primary":"#00344d",
+    "surface-container-highest":"#30353a","outline-variant":"#3e4850",
+    "error":"#ffb4ab","surface-container-high":"#252b2f"
+  }, fontFamily:{"headline":["Manrope"],"body":["Inter"]} }}
+}
+</script>
+<style>
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+body{background:#0f1418;color:#dee3e9;font-family:'Inter',sans-serif;min-height:max(884px,100dvh)}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* Tabs */
+.me-tab{
+  padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;
+  color:var(--me-fg-muted);background:transparent;border:1px solid transparent;
+  transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.me-tab:hover{background:var(--me-bg-elev-2);color:var(--me-fg)}
+.me-tab.active{background:var(--me-bg-elev);border-color:var(--me-border);color:var(--me-primary);font-weight:500}
+
+/* Data rows */
+.me-row{
+  display:grid;grid-template-columns:56px 1fr auto auto;
+  align-items:center;gap:12px;padding:14px 0;
+  border-bottom:1px solid var(--me-border);
+}
+.me-row:last-child{border-bottom:0}
+.me-row img.thumb{width:56px;height:56px;object-fit:contain;background:var(--me-bg-elev-2);border-radius:8px}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:var(--me-bg-elev-2);color:var(--me-fg);border:1px solid var(--me-border);
+  padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;
+  opacity:0;transition:all .25s;pointer-events:none;
+  display:flex;align-items:center;gap:8px;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok {border-color:rgba(74,222,128,.4)}
+#toast.err{border-color:rgba(252,165,165,.4)}
+
+@keyframes me-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.me-spin{animation:me-spin .8s linear infinite;display:inline-block}
+</style>
+<link rel="stylesheet" href="/assets/site.css"/>
+</head>
+<body class="me-page" data-active-nav="">
+<div id="toast"></div>
+
+<main class="px-6 max-w-6xl mx-auto pt-8 pb-24">
+
+  <!-- Header -->
+  <header class="mb-8 flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <h1 style="font-family:'Manrope',sans-serif" class="text-4xl font-light tracking-tight text-on-surface">Admin Panel</h1>
+      <p id="subtitle" style="color:var(--me-fg-muted)" class="text-sm mt-2">Loading…</p>
+    </div>
+    <span id="role-badge" class="me-pill mt-2" style="font-size:11px"></span>
+  </header>
+
+  <!-- Tabs -->
+  <div style="overflow-x:auto;margin-bottom:24px">
+    <nav id="tabs" class="flex gap-2" style="width:max-content;padding:4px;background:var(--me-bg-elev);border-radius:10px;border:1px solid var(--me-border)"></nav>
+  </div>
+
+  <!-- Panel content -->
+  <section id="panel" class="me-card" style="padding:28px;min-height:300px"></section>
+
+</main>
+
+<!-- Modal backdrop -->
+<div id="modal" class="me-modal-backdrop">
+  <div class="me-modal" id="modal-inner" style="max-width:480px"></div>
+</div>
+
+<script src="/assets/site.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  AUTH GUARD — server-verified, fixes stale localStorage sessions
+// ═══════════════════════════════════════════════════════════════════════════
+let ME_USER = null;
+
+(async () => {
+  const tok = ME.auth.token();
+  if (!tok) { window.location.href = '/login'; return; }
+
+  try {
+    const res = await fetch(ME.API + '/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + tok, 'X-Auth-Token': 'Bearer ' + tok }
+    });
+
+    if (res.status === 401) {
+      // Some deployments reject /auth/me despite a valid callback token.
+      // Keep the current signed-in user state instead of forcing logout.
+      throw new Error('auth_me_unauthorized');
+    }
+    if (!res.ok) throw new Error('Server error');
+
+    const data = await res.json();
+    const user = ME.auth.normalizeUser(data.admin || {});
+
+    const cid = String((user && user.cid) || '');
+    const cidAllowed = Array.isArray(ME.ADMIN_CIDS) && ME.ADMIN_CIDS.includes(cid);
+    if (!user || ((user.role !== 'admin' && user.role !== 'superadmin') && !cidAllowed)) {
+      window.location.href = '/';
+      return;
+    }
+
+    localStorage.setItem('me_user', JSON.stringify(user));
+    ME_USER = user;
+
+    document.getElementById('subtitle').textContent =
+      'Signed in as ' + ME_USER.name + '  ·  CID ' + ME_USER.cid;
+    document.getElementById('role-badge').textContent = ME_USER.role;
+
+    loadTab('partners');
+  } catch (e) {
+    console.error('Auth check failed:', e);
+    const cached = ME.auth.normalizeUser(ME.auth.user() || ME.auth.tokenPayload() || {});
+    const cachedCid = String(cached.cid || '');
+    const cachedAllowed = Array.isArray(ME.ADMIN_CIDS) && ME.ADMIN_CIDS.includes(cachedCid);
+    if (cached && (cached.role === 'admin' || cached.role === 'superadmin' || cachedAllowed)) {
+      ME_USER = cached;
+      ME.auth.setUser(cached);
+      document.getElementById('subtitle').textContent =
+        'Signed in as ' + ME_USER.name + '  ·  CID ' + ME_USER.cid;
+      document.getElementById('role-badge').textContent = ME_USER.role;
+      loadTab('partners');
+    } else {
+      window.location.href = '/login';
+    }
+  }
+})();
+
+const isSuperAdmin = () => ME_USER && ME_USER.role === 'superadmin';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  API HELPER
+// ═══════════════════════════════════════════════════════════════════════════
+async function api(path, method = 'GET', body = null) {
+  // Accept either api(path, 'METHOD', body) or api(path, { method, body })
+  if (method && typeof method === 'object') {
+    body   = method.body ?? null;
+    method = method.method || 'GET';
+  }
+  const headers = { 'Content-Type': 'application/json', ...ME.auth.headers() };
+  const opts = { method, headers };
+  if (body !== null) opts.body = JSON.stringify(body);
+
+  let res;
+  try {
+    res = await fetch(`${ME.API}${path}`, opts);
+  } catch (e) {
+    throw new Error('Network error — cannot reach API server');
+  }
+
+  if (res.status === 401) throw new Error('Unauthorized request — please refresh and try again');
+
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new Error((data && (data.error || data.message)) || `HTTP ${res.status}`);
+  return data;
+}
+
+async function apiUpload(path, formData) {
+  const headers = { ...ME.auth.headers() };
+  let res;
+  try {
+    res = await fetch(`${ME.API}${path}`, { method: 'POST', headers, body: formData });
+  } catch (e) {
+    throw new Error('Network error — cannot reach API server');
+  }
+  if (res.status === 401) throw new Error('Unauthorized request — please refresh and try again');
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new Error((data && (data.error || data.message)) || `HTTP ${res.status}`);
+  return data;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════════════════
+let _toastTimer;
+function toast(msg, kind = 'ok') {
+  const el = document.getElementById('toast');
+  el.innerHTML = '';
+  const icon = Object.assign(document.createElement('span'), { className: 'material-symbols-outlined' });
+  icon.style.fontSize = '16px';
+  icon.style.color = kind === 'err' ? '#fca5a5' : '#4ade80';
+  icon.textContent = kind === 'err' ? 'error' : 'check_circle';
+  el.appendChild(icon);
+  el.appendChild(document.createTextNode(' ' + msg));
+  el.className = `show ${kind}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════════════════════════════════
+function openModal(html) {
+  document.getElementById('modal-inner').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('modal-inner').innerHTML = '';
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════════════════════
+const TABS = [
+  { key: 'partners', label: 'Partners',      icon: 'handshake' },
+  { key: 'airlines', label: 'Airlines',       icon: 'airlines' },
+  { key: 'planning', label: 'Planning Team',  icon: 'groups' },
+  { key: 'hitsquad', label: 'Hitsquad',       icon: 'emergency' },
+  { key: 'briefing', label: 'Pilot Briefing', icon: 'description' },
+  { key: 'events',   label: 'Events',         icon: 'event' },
+  { key: 'announcements', label: 'Announcements', icon: 'campaign' },
+  { key: 'allowedcids', label: 'Allowed CIDs', icon: 'verified_user' },
+  { key: 'giveaways', label: 'Giveaways',       icon: 'redeem' },
+  { key: 'admins',   label: 'Admins',         icon: 'admin_panel_settings', superOnly: true },
+];
+
+let activeTab = 'partners'; // Fix initialization error
+
+function renderTabs(key) {
+  activeTab = key;
+  document.getElementById('tabs').innerHTML = TABS
+    .filter(t => !t.superOnly || isSuperAdmin())
+    .map(t => `
+      <button class="me-tab ${t.key === key ? 'active' : ''}" data-tab="${t.key}">
+        <span class="material-symbols-outlined" style="font-size:15px">${t.icon}</span>
+        ${t.label}
+      </button>`)
+    .join('');
+  document.querySelectorAll('[data-tab]').forEach(b =>
+    b.addEventListener('click', () => loadTab(b.dataset.tab)));
+}
+
+function loadTab(key) {
+  renderTabs(key);
+  PANELS[key]();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SHARED UI HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function panelHTML(titleHTML, addBtnLabel, addBtnId) {
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--me-border)">
+      <h2 style="font-family:'Manrope',sans-serif;font-size:22px;font-weight:300">${titleHTML}</h2>
+      ${addBtnLabel ? `<button class="me-btn" id="${addBtnId}" style="display:inline-flex;align-items:center;gap:6px">
+        <span class="material-symbols-outlined" style="font-size:15px">add</span>${addBtnLabel}
+      </button>` : ''}
+    </div>
+    <div id="panel-list"><span style="color:var(--me-fg-muted);font-size:13px">Loading…</span></div>`;
+}
+
+function setListLoading(msg = 'Loading…') {
+  document.getElementById('panel-list').innerHTML =
+    `<span style="color:var(--me-fg-muted);font-size:13px">${msg}</span>`;
+}
+
+function setListError(msg) {
+  document.getElementById('panel-list').innerHTML =
+    `<div style="padding:12px 16px;border:1px solid rgba(252,165,165,.25);border-radius:8px;background:rgba(239,68,68,.05)">
+      <p style="color:#fca5a5;font-weight:500;margin:0 0 4px">Failed to load data</p>
+      <p style="color:var(--me-fg-muted);font-size:12px;margin:0">${msg}</p>
+    </div>`;
+}
+
+function modalForm(title, formId, fieldsHTML, submitLabel) {
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">${title}</h3>
+      <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form id="${formId}" class="space-y-4" novalidate>
+      ${fieldsHTML}
+      <div id="form-error" style="display:none;padding:10px 14px;border:1px solid rgba(252,165,165,.3);border-radius:8px;background:rgba(239,68,68,.05);font-size:12px;color:#fca5a5"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px">
+        <button type="button" class="me-btn me-btn--ghost" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="me-btn" id="form-submit">${submitLabel}</button>
+      </div>
+    </form>`;
+}
+
+function showFormError(msg) {
+  const el = document.getElementById('form-error');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function setSubmitLoading(loading) {
+  const btn = document.getElementById('form-submit');
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn.dataset.orig = btn.textContent;
+    btn.innerHTML = '<span class="material-symbols-outlined me-spin" style="font-size:14px;vertical-align:middle">progress_activity</span> Saving…';
+  } else {
+    btn.textContent = btn.dataset.orig || 'Save';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PANELS
+// ═══════════════════════════════════════════════════════════════════════════
+const PANELS = {};
+
+// ── PEOPLE (Planning Team + Hitsquad) ──────────────────────────────────────
+function makePeoplePanel(endpoint, label, singularLabel) {
+  return async function () {
+    const panel = document.getElementById('panel');
+    panel.innerHTML = panelHTML(label, `Add ${singularLabel}`, 'btn-add');
+
+    // Capture endpoint in this closure scope, attach click AFTER innerHTML is set
+    document.getElementById('btn-add').onclick = () => openPersonModal(endpoint, singularLabel, null);
+
+    try {
+      const result = await api(endpoint);
+      const rows = result.data || [];
+      const listEl = document.getElementById('panel-list');
+
+      if (!rows.length) {
+        listEl.innerHTML = `<p style="color:var(--me-fg-muted);padding:16px 0">No ${label.toLowerCase()} members yet.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = rows.map(p => `
+        <div class="me-row">
+          <img class="thumb" src="${p.photo_url || '/assets/avatar-placeholder.svg'}" alt=""
+               onerror="this.src='/assets/avatar-placeholder.svg'"/>
+          <div>
+            <div style="color:var(--me-fg);font-weight:500">${escHtml(p.name)}</div>
+            <div style="color:var(--me-fg-dim);font-size:12px">
+              ${escHtml(p.role || '—')}${p.subsection ? '  ·  ' + escHtml(String(p.subsection).replace(/_/g,' ')) : ''}${p.cid ? '  ·  CID ' + escHtml(String(p.cid)) : ''}
+            </div>
+          </div>
+          <button class="me-btn me-btn--ghost" data-edit-id="${p.id}"
+                  style="display:inline-flex;align-items:center;gap:4px">
+            <span class="material-symbols-outlined" style="font-size:14px">edit</span> Edit
+          </button>
+          <button class="me-btn me-btn--ghost" data-del-id="${p.id}"
+                  style="color:#fca5a5;display:inline-flex;align-items:center;gap:4px">
+            <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+          </button>
+        </div>`).join('');
+
+      // Edit buttons — find the row data inline from the rendered rows array
+      listEl.querySelectorAll('[data-edit-id]').forEach(btn => {
+        const id = Number(btn.dataset.editId);
+        const person = rows.find(r => r.id === id);
+        btn.onclick = () => openPersonModal(endpoint, singularLabel, person);
+      });
+
+      // Delete buttons
+      listEl.querySelectorAll('[data-del-id]').forEach(btn => {
+        const id = Number(btn.dataset.delId);
+        const person = rows.find(r => r.id === id);
+        btn.onclick = async () => {
+          if (!confirm(`Remove ${person ? person.name : 'this person'}?`)) return;
+          try {
+            await api(`${endpoint}/${id}`, 'DELETE');
+            toast('Removed');
+            PANELS[activeTab](); // re-render current tab
+          } catch (e) { toast(e.message, 'err'); }
+        };
+      });
+
+      // ── Local Preview rows ──
+      const lpSection = endpoint.replace('/', ''); // '/planning' → 'planning'
+      lpInjectAddBtn(lpSection, ['name','role','cid','photo_url'], {
+        name:'Name *', role:'Role / Position', cid:'VATSIM CID', photo_url:'Photo URL'
+      });
+      lpInjectRows(lpSection, r => `
+        <img class="thumb" src="${r.photo_url || '/assets/avatar-placeholder.svg'}" alt=""
+             onerror="this.src='/assets/avatar-placeholder.svg'"/>
+        <div>
+          <div style="color:var(--me-fg);font-weight:500">${escHtml(r.name || '')}</div>
+          <div style="color:var(--me-fg-dim);font-size:12px">${escHtml(r.role || '—')}</div>
+        </div>`);
+
+    } catch (e) {
+      setListError(e.message);
+    }
+  };
+}
+
+function openPersonModal(endpoint, singularLabel, person) {
+  const v = person || {};
+  const isEdit = !!person;
+  const isPlanning = endpoint === '/planning';
+
+  const subsectionOptions = [
+    { value: 'team_leads',     label: 'Team Leads' },
+    { value: 'communications', label: 'Communications' },
+    { value: 'routes',         label: 'Routes' },
+    { value: 'technology',     label: 'Technology' },
+    { value: 'other',          label: 'Other / Team Members' },
+  ];
+  const subsectionField = isPlanning ? `
+     <div><label class="me-label">Subsection *</label>
+       <select class="me-input" name="subsection" required>
+         <option value="" ${!v.subsection ? 'selected' : ''} disabled>Select a subsection…</option>
+         ${subsectionOptions.map(o =>
+           `<option value="${o.value}" ${v.subsection === o.value ? 'selected' : ''}>${o.label}</option>`
+         ).join('')}
+       </select></div>` : '';
+
+  openModal(modalForm(
+    `${isEdit ? 'Edit' : 'Add'} ${singularLabel}`,
+    'person-form',
+    `<div><label class="me-label">Name *</label>
+       <input class="me-input" name="name" required value="${escAttr(v.name || '')}"/></div>
+     <div><label class="me-label">Role / Position</label>
+       <input class="me-input" name="role" value="${escAttr(v.role || '')}"/></div>
+     ${subsectionField}
+     <div><label class="me-label">VATSIM CID</label>
+       <input class="me-input" name="cid" value="${escAttr(String(v.cid || ''))}"/></div>
+     <div><label class="me-label">Photo URL</label>
+       <input class="me-input" name="photo_url" value="${escAttr(v.photo_url || '')}" placeholder="https://…"/></div>
+     <div><label class="me-label">Bio</label>
+       <textarea class="me-input" name="bio" rows="3">${escHtml(v.bio || '')}</textarea></div>`,
+    isEdit ? 'Save Changes' : 'Add Member'
+  ));
+
+  document.getElementById('person-form').onsubmit = async e => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target).entries());
+    setSubmitLoading(true);
+    try {
+      if (isEdit) await api(`${endpoint}/${person.id}`, 'PUT', body);
+      else        await api(endpoint, 'POST', body);
+      closeModal();
+      toast(isEdit ? 'Changes saved' : 'Member added');
+      PANELS[activeTab]();
+    } catch (err) { showFormError(err.message); setSubmitLoading(false); }
+  };
+}
+
+PANELS.planning = makePeoplePanel('/planning', 'Planning Team', 'Planner');
+PANELS.hitsquad = makePeoplePanel('/hitsquad', 'Hitsquad', 'Member');
+
+// ── PARTNERS ───────────────────────────────────────────────────────────────
+PANELS.partners = async function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = panelHTML('Partners', 'Add Partner', 'btn-add');
+  document.getElementById('btn-add').onclick = () => openPartnerModal(null);
+
+  try {
+    const result = await api('/partners');
+    const rows = result.data || [];
+    const listEl = document.getElementById('panel-list');
+
+    if (!rows.length) {
+      listEl.innerHTML = '<p style="color:var(--me-fg-muted);padding:16px 0">No partners yet.</p>';
+      return;
+    }
+
+    listEl.innerHTML = rows.map(p => `
+      <div class="me-row">
+        <img class="thumb" src="${p.logo_url || '/assets/avatar-placeholder.svg'}" alt=""/>
+        <div>
+          <div style="color:var(--me-fg);font-weight:500">${escHtml(p.name)}</div>
+          <div style="color:var(--me-fg-dim);font-size:12px">
+            ${escHtml(p.type || '')} · ${escHtml(p.status || '')}
+            ${p.website ? ` · <a href="${escAttr(p.website)}" target="_blank" style="color:var(--me-primary)">↗ website</a>` : ''}
+          </div>
+        </div>
+        <button class="me-btn me-btn--ghost" data-edit-id="${p.id}"
+                style="display:inline-flex;align-items:center;gap:4px">
+          <span class="material-symbols-outlined" style="font-size:14px">edit</span> Edit
+        </button>
+        <button class="me-btn me-btn--ghost" data-del-id="${p.id}"
+                style="color:#fca5a5;display:inline-flex;align-items:center;gap:4px">
+          <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+        </button>
+      </div>`).join('');
+
+    listEl.querySelectorAll('[data-edit-id]').forEach(btn => {
+      const p = rows.find(r => r.id === Number(btn.dataset.editId));
+      btn.onclick = () => openPartnerModal(p);
+    });
+    listEl.querySelectorAll('[data-del-id]').forEach(btn => {
+      const id = Number(btn.dataset.delId);
+      const p = rows.find(r => r.id === id);
+      btn.onclick = async () => {
+        if (!confirm(`Delete partner "${p ? p.name : id}"?`)) return;
+        try { await api(`/partners/${id}`, 'DELETE'); toast('Deleted'); PANELS.partners(); }
+        catch (e) { toast(e.message, 'err'); }
+      };
+    });
+
+    // ── Local Preview rows ──
+    lpInjectAddBtn('partners', ['name','type','status','website','logo_url'], {
+      name:'Name *', type:'Type (e.g. VA, ATC)', status:'Status', website:'Website URL', logo_url:'Logo URL'
+    });
+    lpInjectRows('partners', r => `
+      <img class="thumb" src="${r.logo_url || '/assets/avatar-placeholder.svg'}" alt=""/>
+      <div>
+        <div style="color:var(--me-fg);font-weight:500">${escHtml(r.name || '')}</div>
+        <div style="color:var(--me-fg-dim);font-size:12px">${escHtml(r.type || '')} · ${escHtml(r.status || '')}</div>
+      </div>`);
+
+  } catch (e) { setListError(e.message); }
+};
+
+function openPartnerModal(partner) {
+  const v = partner || {};
+  const isEdit = !!partner;
+  openModal(modalForm(
+    `${isEdit ? 'Edit' : 'Add'} Partner`, 'partner-form',
+    `<div><label class="me-label">Name *</label>
+       <input class="me-input" name="name" required value="${escAttr(v.name || '')}"/></div>
+     <div><label class="me-label">Type *</label>
+       <input class="me-input" name="type" required value="${escAttr(v.type || '')}" placeholder="Regional Division, ATC, VA…"/></div>
+     <div><label class="me-label">Status</label>
+       <select class="me-input" name="status">
+         ${['pending','verified','suspended','inactive'].map(s =>
+           `<option value="${s}" ${v.status===s?'selected':''}>${s}</option>`).join('')}
+       </select></div>
+     <div><label class="me-label">Logo URL</label>
+       <input class="me-input" name="logo_url" value="${escAttr(v.logo_url || '')}" placeholder="https://…"/></div>
+     <div><label class="me-label">Website URL</label>
+       <input class="me-input" name="website" value="${escAttr(v.website || '')}" placeholder="https://…"/></div>
+     <div><label class="me-label">Description</label>
+       <textarea class="me-input" name="description" rows="2">${escHtml(v.description || '')}</textarea></div>
+     <div><label class="me-label">Contact Email</label>
+       <input type="email" class="me-input" name="contact_email" value="${escAttr(v.contact_email || '')}"/></div>`,
+    isEdit ? 'Save Changes' : 'Add Partner'
+  ));
+  document.getElementById('partner-form').onsubmit = async e => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target).entries());
+    setSubmitLoading(true);
+    try {
+      if (isEdit) await api(`/partners/${partner.id}`, 'PUT', body);
+      else        await api('/partners', 'POST', body);
+      closeModal(); toast(isEdit ? 'Changes saved' : 'Partner added'); PANELS.partners();
+    } catch (err) { showFormError(err.message); setSubmitLoading(false); }
+  };
+}
+
+// ── AIRLINES ───────────────────────────────────────────────────────────────
+PANELS.airlines = async function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = panelHTML('Virtual Airlines', 'Register Airline', 'btn-add');
+  document.getElementById('btn-add').onclick = () => openAirlineModal(null);
+
+  try {
+    const result = await api('/airlines?per=100');
+    const rows = result.data || [];
+    const listEl = document.getElementById('panel-list');
+
+    if (!rows.length) {
+      listEl.innerHTML = '<p style="color:var(--me-fg-muted);padding:16px 0">No airlines yet.</p>';
+      return;
+    }
+
+    listEl.innerHTML = rows.map(a => `
+      <div class="me-row">
+        <img class="thumb" src="${a.logo_url || '/assets/avatar-placeholder.svg'}" alt=""/>
+        <div>
+          <div style="color:var(--me-fg);font-weight:500">${escHtml(a.name)}</div>
+          <div style="color:var(--me-fg-dim);font-size:12px;font-family:monospace">
+            ${escHtml(a.icao || '')}${a.callsign ? ' · ' + escHtml(a.callsign) : ''}
+            · ${escHtml(a.status || '')} · ${a.pilot_count || 0} pilots
+          </div>
+        </div>
+        <button class="me-btn me-btn--ghost" data-edit-id="${a.id}"
+                style="display:inline-flex;align-items:center;gap:4px">
+          <span class="material-symbols-outlined" style="font-size:14px">edit</span> Edit
+        </button>
+        <button class="me-btn me-btn--ghost" data-del-id="${a.id}"
+                style="color:#fca5a5;display:inline-flex;align-items:center;gap:4px">
+          <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+        </button>
+      </div>`).join('');
+
+    listEl.querySelectorAll('[data-edit-id]').forEach(btn => {
+      const a = rows.find(r => r.id === Number(btn.dataset.editId));
+      btn.onclick = () => openAirlineModal(a);
+    });
+    listEl.querySelectorAll('[data-del-id]').forEach(btn => {
+      const id = Number(btn.dataset.delId);
+      const a = rows.find(r => r.id === id);
+      btn.onclick = async () => {
+        if (!confirm(`Delete airline "${a ? a.name : id}"?`)) return;
+        try { await api(`/airlines/${id}`, 'DELETE'); toast('Deleted'); PANELS.airlines(); }
+        catch (e) { toast(e.message, 'err'); }
+      };
+    });
+
+    // ── Local Preview rows ──
+    lpInjectAddBtn('airlines', ['name','icao','callsign','status','pilot_count'], {
+      name:'Airline Name *', icao:'ICAO *', callsign:'Callsign', status:'Status', pilot_count:'Pilot Count'
+    });
+    lpInjectRows('airlines', r => `
+      <img class="thumb" src="${r.logo_url || '/assets/avatar-placeholder.svg'}" alt=""/>
+      <div>
+        <div style="color:var(--me-fg);font-weight:500">${escHtml(r.name || '')}</div>
+        <div style="color:var(--me-fg-dim);font-size:12px;font-family:monospace">
+          ${escHtml(r.icao || '')}${r.callsign ? ' · '+escHtml(r.callsign) : ''} · ${escHtml(r.status || '')}
+        </div>
+      </div>`);
+
+  } catch (e) { setListError(e.message); }
+};
+
+function openAirlineModal(airline) {
+  const v = airline || {};
+  const isEdit = !!airline;
+  openModal(modalForm(
+    `${isEdit ? 'Edit' : 'Register'} Airline`, 'airline-form',
+    `<div><label class="me-label">Airline Name *</label>
+       <input class="me-input" name="name" required value="${escAttr(v.name || '')}"/></div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+       <div><label class="me-label">ICAO *</label>
+         <input class="me-input" name="icao" required value="${escAttr(v.icao || '')}" placeholder="RAM-V"/></div>
+       <div><label class="me-label">Callsign</label>
+         <input class="me-input" name="callsign" value="${escAttr(v.callsign || '')}"/></div>
+     </div>
+     <div><label class="me-label">Status</label>
+       <select class="me-input" name="status">
+         ${['active','observer','suspended','inactive'].map(s =>
+           `<option value="${s}" ${v.status===s?'selected':''}>${s}</option>`).join('')}
+       </select></div>
+     <div><label class="me-label">Logo URL</label>
+       <input class="me-input" name="logo_url" value="${escAttr(v.logo_url || '')}" placeholder="https://…"/></div>
+     <div><label class="me-label">Pilot Count</label>
+       <input type="number" min="0" class="me-input" name="pilot_count" value="${Number(v.pilot_count) || 0}"/></div>
+     <div><label class="me-label">Description</label>
+       <textarea class="me-input" name="description" rows="2">${escHtml(v.description || '')}</textarea></div>`,
+    isEdit ? 'Save Changes' : 'Register'
+  ));
+  document.getElementById('airline-form').onsubmit = async e => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target).entries());
+    body.pilot_count = Number(body.pilot_count) || 0;
+    setSubmitLoading(true);
+    try {
+      if (isEdit) await api(`/airlines/${airline.id}`, 'PUT', body);
+      else        await api('/airlines', 'POST', body);
+      closeModal(); toast(isEdit ? 'Changes saved' : 'Airline registered'); PANELS.airlines();
+    } catch (err) { showFormError(err.message); setSubmitLoading(false); }
+  };
+}
+
+// ── BRIEFING ───────────────────────────────────────────────────────────────
+PANELS.briefing = async function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = `
+    <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--me-border)">
+      <h2 style="font-family:'Manrope',sans-serif;font-size:22px;font-weight:300">Pilot Briefing PDFs</h2>
+      <p style="color:var(--me-fg-muted);font-size:13px;margin-top:6px">
+        Upload new briefing PDFs. The most recent upload is shown to all pilots on the briefing page.
+      </p>
+    </div>
+    <div id="panel-list"><span style="color:var(--me-fg-muted);font-size:13px">Loading briefings…</span></div>
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--me-border)">
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:14px">Upload New Briefing</h3>
+      <form id="briefing-form" class="space-y-4">
+        <div><label class="me-label">Title (optional)</label>
+          <input class="me-input" name="title" placeholder="e.g. New Year's Morocco — Pilot Briefing"/></div>
+        <div><label class="me-label">PDF File *</label>
+          <input class="me-input" type="file" name="pdf" accept="application/pdf" required style="cursor:pointer"/></div>
+        <div id="upload-error" style="display:none;padding:10px 14px;border:1px solid rgba(252,165,165,.3);border-radius:8px;background:rgba(239,68,68,.05);font-size:12px;color:#fca5a5"></div>
+        <button class="me-btn" type="submit" id="upload-btn"
+                style="display:inline-flex;align-items:center;gap:6px">
+          <span class="material-symbols-outlined" style="font-size:16px">upload</span> Upload Briefing
+        </button>
+      </form>
+    </div>`;
+
+  async function loadBriefings() {
+    try {
+      const res = await api('/briefing');
+      const briefings = res.data || [];
+      if (!briefings.length) {
+        document.getElementById('panel-list').innerHTML =
+          '<p style="color:var(--me-fg-muted);font-size:13px">No briefings uploaded yet.</p>';
+        return;
+      }
+      document.getElementById('panel-list').innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${briefings.map((b, i) => `
+            <div class="me-row" style="grid-template-columns:auto 1fr auto auto;align-items:center" data-id="${b.id}">
+              <span class="material-symbols-outlined" style="color:var(--me-primary);font-size:28px">picture_as_pdf</span>
+              <div>
+                <div style="color:var(--me-fg);font-weight:500;font-size:14px">
+                  ${escHtml(b.title || 'Briefing')}
+                  ${i === 0 ? '<span style="margin-left:8px;font-size:10px;background:rgba(245,158,11,0.15);color:var(--me-primary);padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:0.08em">Latest</span>' : ''}
+                </div>
+                <div style="color:var(--me-fg-dim);font-size:12px">
+                  Uploaded ${new Date(b.created_at).toLocaleString('en-GB')}
+                </div>
+              </div>
+              <a class="me-btn me-btn--ghost" href="${escAttr(b.url)}" target="_blank"
+                 style="text-decoration:none;font-size:12px;padding:6px 12px">View</a>
+              <button class="me-btn" data-delete-id="${b.id}"
+                style="background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.25);font-size:12px;padding:6px 12px;display:inline-flex;align-items:center;gap:4px">
+                <span class="material-symbols-outlined" style="font-size:14px">delete</span> Delete
+              </button>
+            </div>
+          `).join('')}
+        </div>`;
+
+      // Attach delete handlers
+      document.querySelectorAll('[data-delete-id]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.deleteId;
+          const label = btn.closest('[data-id]').querySelector('[style*="font-weight"]').textContent.trim();
+          if (!confirm(`Delete "${label}"? This cannot be undone.`)) return;
+          btn.disabled = true;
+          btn.innerHTML = '<span class="material-symbols-outlined me-spin" style="font-size:14px">progress_activity</span>';
+          try {
+            await api(`/briefing/${id}`, { method: 'DELETE' });
+            toast('Briefing deleted');
+            loadBriefings();
+          } catch (err) {
+            toast('Delete failed: ' + err.message, true);
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">delete</span> Delete';
+          }
+        });
+      });
+    } catch (err) {
+      document.getElementById('panel-list').innerHTML =
+        `<p style="color:var(--me-fg-muted);font-size:13px">Failed to load briefings: ${escHtml(err.message)}</p>`;
+    }
+  }
+
+  loadBriefings();
+
+  document.getElementById('briefing-form').onsubmit = async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const btn = document.getElementById('upload-btn');
+    const errEl = document.getElementById('upload-error');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined me-spin" style="font-size:14px">progress_activity</span> Uploading…';
+    try {
+      await apiUpload('/briefing', fd);
+      toast('Briefing uploaded');
+      e.target.reset();
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">upload</span> Upload Briefing';
+      loadBriefings();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">upload</span> Upload Briefing';
+    }
+  };
+};
+
+// ── EVENTS ─────────────────────────────────────────────────────────────────
+PANELS.events = async function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = panelHTML('Events', 'Add Event', 'btn-add');
+  document.getElementById('btn-add').onclick = () => openEventModal(null);
+
+  try {
+    const result = await api('/events?per=100');
+    const rows = result.data || [];
+    const listEl = document.getElementById('panel-list');
+    if (!rows.length) {
+      listEl.innerHTML = '<p style="color:var(--me-fg-muted);padding:16px 0">No events found.</p>';
+      return;
+    }
+    listEl.innerHTML = rows.map(ev => `
+      <div class="me-row" style="grid-template-columns:1fr auto auto auto auto auto">
+        <div>
+          <div style="color:var(--me-fg);font-weight:500">${escHtml(ev.title)}</div>
+          <div style="color:var(--me-fg-dim);font-size:12px">
+            ${escHtml(ev.start_time || '—')} → ${escHtml(ev.end_time || '—')}
+          </div>
+        </div>
+        <span class="me-pill">${escHtml(ev.status || '—')}</span>
+        <button class="me-btn me-btn--ghost" data-discord-id="${ev.id}"
+                style="display:inline-flex;align-items:center;gap:4px;color:#5865F2"
+                title="Post announcement to Discord channel">
+          <span class="material-symbols-outlined" style="font-size:14px">send</span> Announce
+        </button>
+        <button class="me-btn me-btn--ghost" data-schedule-id="${ev.id}"
+                style="display:inline-flex;align-items:center;gap:4px;color:#57F287"
+                title="Create a Discord scheduled event">
+          <span class="material-symbols-outlined" style="font-size:14px">event</span> Schedule
+        </button>
+        <button class="me-btn me-btn--ghost" data-edit-id="${ev.id}"
+                style="display:inline-flex;align-items:center;gap:4px">
+          <span class="material-symbols-outlined" style="font-size:14px">edit</span> Edit
+        </button>
+        <button class="me-btn me-btn--ghost" data-del-id="${ev.id}"
+                style="color:#fca5a5;display:inline-flex;align-items:center;gap:4px">
+          <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+        </button>
+      </div>`).join('');
+
+    listEl.querySelectorAll('[data-edit-id]').forEach(btn => {
+      const ev = rows.find(r => r.id === Number(btn.dataset.editId));
+      btn.onclick = () => openEventModal(ev);
+    });
+
+    listEl.querySelectorAll('[data-discord-id]').forEach(btn => {
+      const id = Number(btn.dataset.discordId);
+      const ev = rows.find(r => r.id === id);
+      btn.onclick = () => openDiscordEventPreview(ev);
+    });
+
+    listEl.querySelectorAll('[data-schedule-id]').forEach(btn => {
+      const id = Number(btn.dataset.scheduleId);
+      const ev = rows.find(r => r.id === id);
+      btn.onclick = async () => {
+        if (!confirm(`Create a Discord scheduled event for "${ev ? ev.title : id}"?`)) return;
+        btn.disabled = true;
+        btn.textContent = 'Creating…';
+        try {
+          const res = await api(`/discord/schedule-event/${id}`, 'POST');
+          const url = res.event_url ? `\n\nView it: ${res.event_url}` : '';
+          toast('Discord event created! 🎉');
+          if (res.event_url) window.open(res.event_url, '_blank');
+        } catch (e) {
+          toast(e.message, 'err');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">event</span> Schedule';
+        }
+      };
+    });
+
+    listEl.querySelectorAll('[data-del-id]').forEach(btn => {
+      const id = Number(btn.dataset.delId);
+      const ev = rows.find(r => r.id === id);
+      btn.onclick = async () => {
+        if (!confirm(`Delete event "${ev ? ev.title : id}"? This cannot be undone.`)) return;
+        try { await api(`/events/${id}`, 'DELETE'); toast('Event deleted'); PANELS.events(); }
+        catch (e) { toast(e.message, 'err'); }
+      };
+    });
+
+    // ── Local Preview rows ──
+    lpInjectAddBtn('events', ['title','description','start_time','end_time','status'], {
+      title:'Title *', description:'Description', start_time:'Start Time (YYYY-MM-DD HH:MM)',
+      end_time:'End Time (YYYY-MM-DD HH:MM)', status:'Status'
+    });
+    lpInjectRows('events', r => `
+      <div>
+        <div style="color:var(--me-fg);font-weight:500">${escHtml(r.title || '')}</div>
+        <div style="color:var(--me-fg-dim);font-size:12px">
+          ${escHtml(r.start_time || '—')} → ${escHtml(r.end_time || '—')}
+        </div>
+      </div>
+      <span class="me-pill">${escHtml(r.status || 'upcoming')}</span>`);
+
+  } catch (e) { setListError(e.message); }
+};
+
+function openEventModal(event) {
+  const v = event || {};
+  const isEdit = !!event;
+
+  // Format datetime-local value from stored string
+  const fmtDT = (s) => s ? s.replace(' ', 'T').slice(0, 16) : '';
+
+  openModal(modalForm(
+    `${isEdit ? 'Edit' : 'Add'} Event`, 'event-form',
+    `<div><label class="me-label">Title *</label>
+       <input class="me-input" name="title" required value="${escAttr(v.title || '')}"/></div>
+     <div><label class="me-label">Description</label>
+       <textarea class="me-input" name="description" rows="2">${escHtml(v.description || '')}</textarea></div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+       <div><label class="me-label">Start Time *</label>
+         <input type="datetime-local" class="me-input" name="start_time" required
+                value="${escAttr(fmtDT(v.start_time))}"/></div>
+       <div><label class="me-label">End Time *</label>
+         <input type="datetime-local" class="me-input" name="end_time" required
+                value="${escAttr(fmtDT(v.end_time))}"/></div>
+     </div>
+     <div><label class="me-label">Status</label>
+       <select class="me-input" name="status">
+         ${['upcoming','active','completed','cancelled'].map(s =>
+           `<option value="${s}" ${v.status===s?'selected':''}>${s}</option>`).join('')}
+       </select></div>
+     <div><label class="me-label">Banner Image URL</label>
+       <input class="me-input" name="banner_url" value="${escAttr(v.banner_url || '')}"
+              placeholder="https://…"/></div>`,
+    isEdit ? 'Save Changes' : 'Create Event'
+  ));
+
+  document.getElementById('event-form').onsubmit = async e => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target).entries());
+    // Convert datetime-local back to "YYYY-MM-DD HH:MM" for the backend
+    if (body.start_time) body.start_time = body.start_time.replace('T', ' ');
+    if (body.end_time)   body.end_time   = body.end_time.replace('T', ' ');
+    setSubmitLoading(true);
+    try {
+      if (isEdit) await api(`/events/${event.id}`, 'PUT', body);
+      else        await api('/events', 'POST', body);
+      closeModal(); toast(isEdit ? 'Event updated' : 'Event created'); PANELS.events();
+    } catch (err) { showFormError(err.message); setSubmitLoading(false); }
+  };
+}
+
+function openDiscordEventPreview(event) {
+  const fmtTime = s => s ? new Date(s.replace(' ', 'T') + 'Z').toLocaleString('en-GB', {
+    weekday:'short', day:'numeric', month:'short', year:'numeric',
+    hour:'2-digit', minute:'2-digit', timeZone:'UTC', timeZoneName:'short'
+  }) : '—';
+
+  const title       = event.title || '';
+  const description = event.description || 'New event from Maghreb vACC';
+  const timeInfo    = `**Start:** ${fmtTime(event.start_time)}\n**End:** ${fmtTime(event.end_time)}`;
+  const imageUrl    = event.banner_url || '';
+
+  openModal(`
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:4px">Post Event to Discord</h3>
+    <p style="color:var(--me-fg-muted);font-size:13px;margin-bottom:20px">
+      Preview of how this will appear in the Discord event channel:
+    </p>
+    ${discordEmbedPreview({ title, description, para2: timeInfo, image_url: imageUrl })}
+    <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+      <button class="me-btn me-btn--ghost" onclick="closeModal()">Cancel</button>
+      <button class="me-btn" id="discord-send-btn"
+              style="background:#5865F2;border-color:#5865F2;display:inline-flex;align-items:center;gap:6px">
+        <span class="material-symbols-outlined" style="font-size:15px">send</span> Send to Discord
+      </button>
+    </div>
+  `);
+
+  document.getElementById('discord-send-btn').onclick = async () => {
+    document.getElementById('discord-send-btn').disabled = true;
+    document.getElementById('discord-send-btn').textContent = 'Sending…';
+    try {
+      await api(`/discord/event/${event.id}`, 'POST');
+      closeModal();
+      toast('Event posted to Discord!');
+    } catch (e) {
+      document.getElementById('discord-send-btn').disabled = false;
+      document.getElementById('discord-send-btn').innerHTML =
+        '<span class="material-symbols-outlined" style="font-size:15px">send</span> Send to Discord';
+      toast('Discord error: ' + e.message, 'err');
+    }
+  };
+}
+
+function discordEmbedPreview({ title, description, para2, para3, para4, image_url }) {
+  const renderMarkdownLine = s => s
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,     '<em>$1</em>');
+
+  const renderField = val => val
+    ? val.split('\n').map(l => `<div>${renderMarkdownLine(escHtml(l)) || '&nbsp;'}</div>`).join('')
+    : '';
+
+  return `
+    <div style="background:#2b2d31;border-radius:4px;border-left:4px solid #AD42F5;
+                padding:16px;max-width:440px;font-family:'Inter',sans-serif;font-size:14px">
+      <div style="font-weight:600;color:#fff;margin-bottom:6px;font-size:15px">${escHtml(title)}</div>
+      <div style="color:#dbdee1;line-height:1.5;margin-bottom:${para2||image_url?'10px':'0'}">${renderField(description)}</div>
+      ${para2 ? `<div style="color:#dbdee1;line-height:1.5;margin-bottom:${para3||image_url?'10px':'0'}">${renderField(para2)}</div>` : ''}
+      ${para3 ? `<div style="color:#dbdee1;line-height:1.5;margin-bottom:${para4||image_url?'10px':'0'}">${renderField(para3)}</div>` : ''}
+      ${para4 ? `<div style="color:#dbdee1;line-height:1.5;margin-bottom:${image_url?'10px':'0'}">${renderField(para4)}</div>` : ''}
+      ${image_url ? `<img src="${escAttr(image_url)}" style="width:100%;border-radius:4px;margin-top:4px" onerror="this.style.display='none'" alt="Banner"/>` : ''}
+    </div>
+    <p style="font-size:11px;color:var(--me-fg-muted);margin-top:8px">
+      ↑ Approximate preview — actual Discord rendering may vary slightly
+    </p>`;
+}
+
+// ── ANNOUNCEMENTS ─────────────────────────────────────────────────────────
+PANELS.announcements = function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--me-border)">
+      <h2 style="font-size:18px;font-weight:600;color:var(--me-fg)">Discord Announcements</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+
+      <!-- Form column -->
+      <div>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:var(--me-fg)">Compose Announcement</h3>
+        <form id="ann-form">
+          <div style="margin-bottom:12px">
+            <label class="me-label">Channel *</label>
+            <select class="me-input" id="ann-channel" name="channel">
+              <option value="announcement">📢 Announcement Channel</option>
+              <option value="event">🗓️ Event Channel</option>
+            </select>
+          </div>
+          <div style="margin-bottom:12px">
+            <label class="me-label">Title *</label>
+            <input class="me-input" id="ann-title" name="title" placeholder="Announcement title" required/>
+          </div>
+          <div style="margin-bottom:12px">
+            <label class="me-label">Description / First Paragraph *</label>
+            <textarea class="me-input" id="ann-desc" name="description" rows="3"
+              placeholder="Main body text. Supports **bold** and *italic* markdown." required></textarea>
+          </div>
+          <div style="margin-bottom:12px">
+            <label class="me-label">Second Paragraph <span style="color:var(--me-fg-muted);font-weight:400">(optional)</span></label>
+            <textarea class="me-input" id="ann-para2" name="para2" rows="2" placeholder="Optional second paragraph…"></textarea>
+          </div>
+          <div style="margin-bottom:12px">
+            <label class="me-label">Third Paragraph <span style="color:var(--me-fg-muted);font-weight:400">(optional)</span></label>
+            <textarea class="me-input" id="ann-para3" name="para3" rows="2" placeholder="Optional third paragraph…"></textarea>
+          </div>
+          <div style="margin-bottom:12px">
+            <label class="me-label">Fourth Paragraph <span style="color:var(--me-fg-muted);font-weight:400">(optional)</span></label>
+            <textarea class="me-input" id="ann-para4" name="para4" rows="2" placeholder="Optional fourth paragraph…"></textarea>
+          </div>
+          <div style="margin-bottom:20px">
+            <label class="me-label">Banner Image URL <span style="color:var(--me-fg-muted);font-weight:400">(optional)</span></label>
+            <input class="me-input" id="ann-image" name="image_url" placeholder="https://…" type="url"/>
+          </div>
+          <div id="ann-form-error" style="color:#fca5a5;font-size:13px;margin-bottom:12px;display:none"></div>
+          <button type="submit" id="ann-submit" class="me-btn"
+                  style="background:#5865F2;border-color:#5865F2;width:100%;justify-content:center;display:flex;align-items:center;gap:8px">
+            <span class="material-symbols-outlined" style="font-size:15px">send</span>
+            Send to Discord
+          </button>
+        </form>
+      </div>
+
+      <!-- Live preview column -->
+      <div>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:var(--me-fg)">
+          Live Preview
+          <span style="font-weight:400;font-size:12px;color:var(--me-fg-muted);margin-left:6px">— updates as you type</span>
+        </h3>
+        <div id="ann-preview-wrap">
+          <div style="background:#2b2d31;border-radius:4px;border-left:4px solid #AD42F5;padding:16px;
+                      font-family:'Inter',sans-serif;font-size:14px;color:#dbdee1">
+            <div style="color:#888;font-style:italic">Start typing to see preview…</div>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--me-fg-muted);margin-top:8px">
+          ↑ Approximate Discord embed preview
+        </p>
+        <div style="margin-top:16px;padding:12px 14px;background:var(--me-bg-elev);border-radius:8px;
+                    border:1px solid var(--me-border);font-size:12px;color:var(--me-fg-muted);line-height:1.6">
+          <strong style="color:var(--me-fg)">Tips:</strong><br/>
+          • Use <code style="background:var(--me-bg-elev-2);padding:1px 4px;border-radius:3px">**text**</code> for <strong>bold</strong><br/>
+          • Use <code style="background:var(--me-bg-elev-2);padding:1px 4px;border-radius:3px">*text*</code> for <em>italic</em><br/>
+          • The bot will also ping the Events Announcements role<br/>
+          • Image must be a publicly accessible URL
+        </div>
+      </div>
+    </div>`;
+
+  // Live preview update
+  function updatePreview() {
+    const title    = document.getElementById('ann-title')?.value || '';
+    const desc     = document.getElementById('ann-desc')?.value || '';
+    const para2    = document.getElementById('ann-para2')?.value || '';
+    const para3    = document.getElementById('ann-para3')?.value || '';
+    const para4    = document.getElementById('ann-para4')?.value || '';
+    const imageUrl = document.getElementById('ann-image')?.value || '';
+    const wrap     = document.getElementById('ann-preview-wrap');
+    if (!wrap) return;
+    if (!title && !desc) {
+      wrap.innerHTML = `<div style="background:#2b2d31;border-radius:4px;border-left:4px solid #AD42F5;
+        padding:16px;font-family:'Inter',sans-serif;font-size:14px;color:#dbdee1">
+        <div style="color:#888;font-style:italic">Start typing to see preview…</div></div>`;
+      return;
+    }
+    wrap.innerHTML = discordEmbedPreview({ title, description: desc, para2, para3, para4, image_url: imageUrl });
+  }
+
+  ['ann-title','ann-desc','ann-para2','ann-para3','ann-para4','ann-image'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updatePreview);
+  });
+
+  // Form submit
+  document.getElementById('ann-form').onsubmit = async e => {
+    e.preventDefault();
+    const errEl  = document.getElementById('ann-form-error');
+    const submit = document.getElementById('ann-submit');
+    errEl.style.display = 'none';
+    submit.disabled = true;
+    submit.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px;animation:spin 1s linear infinite">sync</span> Sending…';
+
+    const body = {
+      channel:     document.getElementById('ann-channel').value,
+      title:       document.getElementById('ann-title').value.trim(),
+      description: document.getElementById('ann-desc').value.trim(),
+      para2:       document.getElementById('ann-para2').value.trim(),
+      para3:       document.getElementById('ann-para3').value.trim(),
+      para4:       document.getElementById('ann-para4').value.trim(),
+      image_url:   document.getElementById('ann-image').value.trim(),
+    };
+
+    try {
+      await api('/discord/announce', 'POST', body);
+      toast('Announcement sent to Discord!');
+      // Reset form
+      e.target.reset();
+      updatePreview();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+    } finally {
+      submit.disabled = false;
+      submit.innerHTML = '<span class="material-symbols-outlined" style="font-size:15px">send</span> Send to Discord';
+    }
+  };
+};
+
+// ── ADMINS (superadmin only) ───────────────────────────────────────────────
+PANELS.admins = async function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = panelHTML('Administrators', 'Add Admin', 'btn-add');
+
+  document.getElementById('btn-add').onclick = () => {
+    openModal(modalForm(
+      'Add Administrator', 'admin-form',
+      `<p style="color:var(--me-fg-muted);font-size:13px;margin-bottom:4px">
+        Adding an admin also grants their CID access to this panel. They must sign in via VATSIM Connect.
+       </p>
+       <div><label class="me-label">VATSIM CID *</label>
+         <input class="me-input" name="cid" required placeholder="1234567"/></div>
+       <div><label class="me-label">Full Name *</label>
+         <input class="me-input" name="name" required/></div>
+       <div><label class="me-label">Email Address</label>
+         <input type="email" class="me-input" name="email" placeholder="Pulled from VATSIM if left blank"/></div>
+       <div><label class="me-label">Role</label>
+         <select class="me-input" name="role">
+           <option value="admin">admin</option>
+           <option value="superadmin">superadmin</option>
+         </select></div>`,
+      'Create Admin'
+    ));
+    document.getElementById('admin-form').onsubmit = async e => {
+      e.preventDefault();
+      const body = Object.fromEntries(new FormData(e.target).entries());
+      // Backend still requires email; generate a placeholder if blank
+      if (!body.email || !body.email.trim()) {
+        body.email = `cid${body.cid}@vatsim.placeholder`;
+      }
+      // Generate a random unusable password (login is VATSIM-only)
+      body.password = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + 'Aa1!';
+      setSubmitLoading(true);
+      try {
+        await api('/admins', 'POST', body);
+        closeModal(); toast('Admin created'); PANELS.admins();
+      } catch (err) { showFormError(err.message); setSubmitLoading(false); }
+    };
+  };
+
+  try {
+    const result = await api('/admins');
+    const rows = result.data || [];
+    const listEl = document.getElementById('panel-list');
+
+    if (!rows.length) {
+      listEl.innerHTML = '<p style="color:var(--me-fg-muted);padding:16px 0">No admins found.</p>';
+      return;
+    }
+
+    listEl.innerHTML = rows.map(a => `
+      <div class="me-row" style="grid-template-columns:1fr auto auto">
+        <div>
+          <div style="color:var(--me-fg);font-weight:500">
+            ${escHtml(a.name)}
+            ${a.id === ME_USER.id ? '<span style="font-size:10px;color:var(--me-fg-dim);margin-left:6px">(you)</span>' : ''}
+          </div>
+          <div style="color:var(--me-fg-dim);font-size:12px">
+            ${escHtml(a.email || '')} · CID ${escHtml(String(a.cid || ''))}
+          </div>
+        </div>
+        <span class="me-pill">${escHtml(a.role)}</span>
+        ${a.id !== ME_USER.id
+          ? `<button class="me-btn me-btn--ghost" data-del-id="${a.id}"
+                     style="color:#fca5a5;display:inline-flex;align-items:center;gap:4px">
+               <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+             </button>`
+          : '<div></div>'}
+      </div>`).join('');
+
+    listEl.querySelectorAll('[data-del-id]').forEach(btn => {
+      const id = Number(btn.dataset.delId);
+      const a = rows.find(r => r.id === id);
+      btn.onclick = async () => {
+        if (!confirm(`Remove admin "${a ? a.name : id}"? This cannot be undone.`)) return;
+        try { await api(`/admins/${id}`, 'DELETE'); toast('Admin removed'); PANELS.admins(); }
+        catch (e) { toast(e.message, 'err'); }
+      };
+    });
+  } catch (e) { setListError(e.message); }
+};
+
+// ── ALLOWED CIDs ───────────────────────────────────────────────────────────
+PANELS.allowedcids = async function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = panelHTML(
+    'Allowed CIDs <span style="font-size:13px;font-weight:400;color:var(--me-fg-muted);margin-left:8px">— Controls who can access the admin panel via VATSIM login</span>',
+    'Add CID', 'btn-add'
+  );
+
+  document.getElementById('btn-add').onclick = () => {
+    openModal(modalForm(
+      'Add Allowed CID', 'cid-form',
+      `<p style="color:var(--me-fg-muted);font-size:13px;margin-bottom:4px">
+        Add a VATSIM CID to grant admin panel access. The user must sign in via VATSIM Connect.
+       </p>
+       <div><label class="me-label">VATSIM CID *</label>
+         <input class="me-input" name="cid" required placeholder="e.g. 1234567" pattern="[0-9]{4,10}"/></div>
+       <div><label class="me-label">Note (optional)</label>
+         <input class="me-input" name="note" placeholder="e.g. John Smith — Event Director"/></div>`,
+      'Add CID'
+    ));
+    document.getElementById('cid-form').onsubmit = async e => {
+      e.preventDefault();
+      const body = Object.fromEntries(new FormData(e.target).entries());
+      setSubmitLoading(true);
+      try {
+        await api('/allowed-cids', 'POST', body);
+        closeModal();
+        toast('CID added — they can now sign in via VATSIM');
+        PANELS.allowedcids();
+      } catch (err) { showFormError(err.message); setSubmitLoading(false); }
+    };
+  };
+
+  try {
+    const result = await api('/allowed-cids');
+    const rows = result.data || [];
+    const listEl = document.getElementById('panel-list');
+
+    if (!rows.length) {
+      listEl.innerHTML = '<p style="color:var(--me-fg-muted);padding:16px 0">No CIDs in the allowed list yet.</p>';
+      return;
+    }
+
+    listEl.innerHTML = rows.map(r => `
+      <div class="me-row" style="grid-template-columns:1fr auto auto">
+        <div>
+          <div style="color:var(--me-fg);font-weight:500;font-family:monospace;font-size:15px">
+            ${escHtml(r.cid)}
+            ${String(r.cid) === String(ME_USER.cid)
+              ? '<span style="font-size:10px;color:var(--me-fg-dim);font-family:sans-serif;margin-left:8px">(you)</span>'
+              : ''}
+          </div>
+          ${r.note ? `<div style="color:var(--me-fg-dim);font-size:12px">${escHtml(r.note)}</div>` : ''}
+          <div style="color:var(--me-fg-dim);font-size:11px">Added ${new Date(r.created_at).toLocaleDateString('en-GB')}</div>
+        </div>
+        <span class="me-pill" style="font-family:monospace">CID</span>
+        ${String(r.cid) !== String(ME_USER.cid)
+          ? `<button class="me-btn me-btn--ghost" data-del-cid-id="${r.id}"
+                     style="color:#fca5a5;display:inline-flex;align-items:center;gap:4px">
+               <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+             </button>`
+          : '<div></div>'}
+      </div>`).join('');
+
+    listEl.querySelectorAll('[data-del-cid-id]').forEach(btn => {
+      const id  = Number(btn.dataset.delCidId);
+      const row = rows.find(r => r.id === id);
+      btn.onclick = async () => {
+        if (!confirm(`Remove CID ${row ? row.cid : id} from the allowed list?\n\nThey will lose admin access immediately.`)) return;
+        try {
+          await api(`/allowed-cids/${id}`, 'DELETE');
+          toast('CID removed');
+          PANELS.allowedcids();
+        } catch (e) { toast(e.message, 'err'); }
+      };
+    });
+  } catch (e) { setListError(e.message); }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  GIVEAWAYS
+// ═══════════════════════════════════════════════════════════════════════════
+PANELS.giveaways = async function () {
+  const panel = document.getElementById('panel');
+  panel.innerHTML = panelHTML('Giveaways <span style="font-size:13px;color:var(--me-fg-muted);font-weight:400">— manage prize draws</span>', '+ New Giveaway', 'btn-add-giveaway');
+  document.getElementById('btn-add-giveaway').onclick = () => openGiveawayModal(null);
+
+  let giveaways = [];
+
+  function statusPill(s) {
+    const map = {upcoming:'background:rgba(137,206,255,.12);color:#89ceff', open:'background:rgba(74,222,128,.12);color:#4ade80', closed:'background:rgba(255,184,110,.12);color:#ffb86e', drawn:'background:rgba(167,139,250,.12);color:#a78bfa'};
+    return `<span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;${map[s]||'background:rgba(255,255,255,.06);color:var(--me-fg-muted)'}">${s}</span>`;
+  }
+
+  function renderList(items) {
+    const el = document.getElementById('panel-list');
+    if (!items.length) { el.innerHTML = '<p style="color:var(--me-fg-muted);font-size:13px">No giveaways yet.</p>'; return; }
+    el.innerHTML = items.map(g => {
+      const prizes = (g.prizes||[]).slice(0,3).join(', ') + (g.prizes.length > 3 ? ` +${g.prizes.length-3} more` : '');
+      const winnerBadge = g.winner_cid ? `<div style="margin-top:8px;padding:8px 12px;border-radius:6px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);font-size:12px">
+        🏆 <strong style="color:#a78bfa">Winner:</strong> ${escHtml(g.winner_name||g.winner_cid)} (CID ${escHtml(g.winner_cid)}) — <em>${escHtml(g.winner_prize||'')}</em>
+      </div>` : '';
+      return `<div style="padding:16px 0;border-bottom:1px solid var(--me-border)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+              <span style="font-weight:600;font-size:15px">${escHtml(g.title)}</span>
+              ${statusPill(g.status)}
+              <span style="font-size:12px;color:var(--me-fg-muted)">${g.entry_count||0} entr${g.entry_count===1?'y':'ies'}</span>
+            </div>
+            ${g.description ? `<p style="font-size:13px;color:var(--me-fg-muted);margin:0 0 4px">${escHtml(g.description)}</p>` : ''}
+            ${prizes ? `<p style="font-size:12px;color:var(--me-fg-dim);margin:0">🎁 Prizes: ${escHtml(prizes)}</p>` : ''}
+            ${winnerBadge}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;align-items:center">
+            ${g.status === 'upcoming' ? `<button onclick="setGiveawayStatus(${g.id},'open')" class="me-btn" style="font-size:12px;padding:5px 10px;background:rgba(74,222,128,.12);color:#4ade80;border-color:rgba(74,222,128,.2)">Open</button>` : ''}
+            ${g.status === 'open' ? `<button onclick="setGiveawayStatus(${g.id},'closed')" class="me-btn" style="font-size:12px;padding:5px 10px;background:rgba(255,184,110,.12);color:#ffb86e;border-color:rgba(255,184,110,.2)">Close</button>` : ''}
+            ${g.status === 'open' ? `<button onclick="openAddEntryModal(${g.id},'${escAttr(g.title)}')" class="me-btn" style="font-size:12px;padding:5px 10px;background:rgba(74,222,128,.06);color:#4ade80;border-color:rgba(74,222,128,.2)">+ Add Entry</button>` : ''}
+            ${g.status === 'closed' ? `<button onclick="openDrawModal(${g.id})" class="me-btn" style="font-size:12px;padding:5px 10px;background:rgba(167,139,250,.12);color:#a78bfa;border-color:rgba(167,139,250,.2)">🎲 Draw Winner</button>` : ''}
+            ${g.status !== 'drawn' ? `<button onclick="openGiveawayModal(${g.id})" class="me-btn me-btn--ghost" style="font-size:12px;padding:5px 10px">Edit</button>` : ''}
+            <button onclick="viewEntries(${g.id},'${escAttr(g.title)}')" class="me-btn me-btn--ghost" style="font-size:12px;padding:5px 10px">Entries</button>
+            <button onclick="deleteGiveaway(${g.id},'${escAttr(g.title)}')" class="me-btn me-btn--ghost" style="font-size:12px;padding:5px 10px;color:#fca5a5">Delete</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function load() {
+    setListLoading();
+    try {
+      const r = await api('/giveaways');
+      giveaways = r.data || [];
+      renderList(giveaways);
+    } catch(e) { setListError(e.message); }
+  }
+
+  window.setGiveawayStatus = async (id, status) => {
+    try { await api(`/giveaways/${id}/status`, 'PATCH', {status}); toast('Status updated'); load(); }
+    catch(e) { toast(e.message,'err'); }
+  };
+
+  window.deleteGiveaway = async (id, title) => {
+    if (!confirm(`Delete giveaway "${title}"? All entries will also be deleted.`)) return;
+    try { await api(`/giveaways/${id}`, 'DELETE'); toast('Giveaway deleted'); load(); }
+    catch(e) { toast(e.message,'err'); }
+  };
+
+  window.viewEntries = async (id, title) => {
+    openModal(`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">Entries — ${escHtml(title)}</h3>
+      <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div id="entries-list"><span style="color:var(--me-fg-muted);font-size:13px">Loading…</span></div>`);
+    try {
+      const r = await api(`/giveaways/${id}/entries`);
+      const rows = r.data || [];
+      document.getElementById('entries-list').innerHTML = rows.length
+        ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="border-bottom:1px solid var(--me-border);color:var(--me-fg-muted)">
+              <th style="text-align:left;padding:6px 8px">#</th>
+              <th style="text-align:left;padding:6px 8px">CID</th>
+              <th style="text-align:left;padding:6px 8px">Name</th>
+              <th style="text-align:left;padding:6px 8px">Entered</th>
+            </tr></thead>
+            <tbody>${rows.map((e,i)=>`<tr style="border-bottom:1px solid var(--me-border)">
+              <td style="padding:6px 8px;color:var(--me-fg-muted)">${i+1}</td>
+              <td style="padding:6px 8px;font-family:monospace">${escHtml(e.cid)}</td>
+              <td style="padding:6px 8px">${escHtml(e.name||'—')}</td>
+              <td style="padding:6px 8px;color:var(--me-fg-muted)">${e.entered_at ? new Date(e.entered_at).toLocaleString() : '—'}</td>
+            </tr>`).join('')}</tbody>
+          </table>`
+        : '<p style="color:var(--me-fg-muted);font-size:13px">No entries yet.</p>';
+    } catch(e) { document.getElementById('entries-list').innerHTML = `<p style="color:#fca5a5">${e.message}</p>`; }
+  };
+
+  window.openDrawModal = (id) => {
+    const g = giveaways.find(x => x.id === id);
+    if (!g) return;
+    openModal(`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">Draw Winner</h3>
+        <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <p style="font-size:13px;color:var(--me-fg-muted);margin-bottom:16px">
+        Paste or type the <strong style="color:var(--me-fg)">eligible CIDs</strong> (one per line). The system will intersect these with the entry list and randomly select a winner, assigning them a random prize from the prize pool.
+      </p>
+      ${g.eligible_cids && g.eligible_cids.length ? `<p style="font-size:12px;color:var(--me-fg-dim);margin-bottom:8px">Previously saved eligible CIDs pre-loaded (${g.eligible_cids.length})</p>` : ''}
+      <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:6px">Eligible CIDs (one per line) *</label>
+      <textarea id="draw-cids" rows="8" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:10px;color:var(--me-fg);font-family:monospace;font-size:12px;resize:vertical">${(g.eligible_cids||[]).join('\n')}</textarea>
+      <div id="draw-result" style="margin-top:16px"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button id="draw-btn" class="me-btn" style="flex:1">🎲 Draw Winner</button>
+        <button type="button" onclick="closeModal()" class="me-btn me-btn--ghost">Cancel</button>
+      </div>`);
+
+    document.getElementById('draw-btn').onclick = async () => {
+      const raw = document.getElementById('draw-cids').value;
+      const cids = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+      if (!cids.length) { toast('Please enter at least one eligible CID','err'); return; }
+      document.getElementById('draw-btn').disabled = true;
+      document.getElementById('draw-btn').textContent = 'Drawing…';
+      try {
+        const r = await api(`/giveaways/${id}/draw`, 'POST', {eligible_cids: cids});
+        document.getElementById('draw-result').innerHTML = `
+          <div style="padding:16px;border-radius:8px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25)">
+            <p style="font-size:15px;font-weight:600;color:#a78bfa;margin:0 0 8px">🏆 Winner Drawn!</p>
+            <p style="margin:0 0 4px;font-size:14px"><strong>Name:</strong> ${escHtml(r.winner_name||r.winner_cid)}</p>
+            <p style="margin:0 0 4px;font-size:14px"><strong>CID:</strong> <span style="font-family:monospace">${escHtml(r.winner_cid)}</span></p>
+            <p style="margin:0 0 4px;font-size:14px"><strong>Prize:</strong> ${escHtml(r.winner_prize)}</p>
+            <p style="margin:0;font-size:12px;color:var(--me-fg-muted)">${r.qualified_pool} eligible of ${r.total_entries} total entries</p>
+          </div>`;
+        document.getElementById('draw-btn').style.display = 'none';
+        toast('Winner drawn!');
+        load();
+      } catch(e) {
+        document.getElementById('draw-result').innerHTML = `<p style="color:#fca5a5;font-size:13px">${e.message}</p>`;
+        document.getElementById('draw-btn').disabled = false;
+        document.getElementById('draw-btn').textContent = '🎲 Draw Winner';
+      }
+    };
+  };
+
+  function openGiveawayModal(id) {
+    const g = id ? giveaways.find(x => x.id === id) : null;
+    openModal(`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">${g ? 'Edit Giveaway' : 'New Giveaway'}</h3>
+        <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Title *</label>
+          <input id="gw-title" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg)"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Description</label>
+          <textarea id="gw-desc" rows="3" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg);resize:vertical"></textarea>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Prizes (one per line)</label>
+          <textarea id="gw-prizes" rows="4" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg);resize:vertical"></textarea>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Status</label>
+          <select id="gw-status" style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg)">
+            ${['upcoming','open','closed'].map(s=>`<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button id="gw-save" class="me-btn" style="flex:1">${g ? 'Save Changes' : 'Create Giveaway'}</button>
+          <button type="button" onclick="closeModal()" class="me-btn me-btn--ghost">Cancel</button>
+        </div>
+      </div>`);
+
+    // Populate fields safely via JS (avoids any escaping/newline issues in template literals)
+    if (g) {
+      document.getElementById('gw-title').value  = g.title || '';
+      document.getElementById('gw-desc').value   = g.description || '';
+      document.getElementById('gw-prizes').value = (g.prizes || []).join('\n');
+      const sel = document.getElementById('gw-status');
+      for (const opt of sel.options) { if (opt.value === g.status) { opt.selected = true; break; } }
+    }
+
+    document.getElementById('gw-save').onclick = async () => {
+      const title = document.getElementById('gw-title').value.trim();
+      if (!title) { toast('Title is required','err'); return; }
+      const prizes = document.getElementById('gw-prizes').value.split('\n').map(s=>s.trim()).filter(Boolean);
+      const body = {
+        title,
+        description: document.getElementById('gw-desc').value.trim() || null,
+        prizes,
+        status: document.getElementById('gw-status').value,
+      };
+      try {
+        if (g) { await api(`/giveaways/${g.id}`, 'PUT', body); toast('Giveaway updated'); }
+        else    { await api('/giveaways', 'POST', body); toast('Giveaway created'); }
+        closeModal(); load();
+      } catch(e) { toast(e.message,'err'); }
+    };
+  }
+
+  window.openAddEntryModal = async (id, title) => {
+    openModal(`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:400">Add Entry</h3>
+        <button type="button" onclick="closeModal()" style="background:none;border:none;color:var(--me-fg-muted);cursor:pointer;padding:4px;display:flex"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <p style="font-size:13px;color:var(--me-fg-muted);margin-bottom:16px">
+        Manually add a user to <strong style="color:var(--me-fg)"></strong> by their VATSIM CID.
+      </p>
+      <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">VATSIM CID *</label>
+      <input id="entry-cid" type="text" placeholder="e.g. 1234567"
+        style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg);font-family:monospace;margin-bottom:10px"/>
+      <label style="display:block;font-size:13px;color:var(--me-fg-muted);margin-bottom:4px">Name (optional)</label>
+      <input id="entry-name" type="text" placeholder="Full name"
+        style="width:100%;background:var(--me-bg-elev-2);border:1px solid var(--me-border);border-radius:6px;padding:8px 10px;color:var(--me-fg);margin-bottom:16px"/>
+      <div id="entry-result" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <button id="entry-save" class="me-btn" style="flex:1">Add Entry</button>
+        <button type="button" onclick="closeModal()" class="me-btn me-btn--ghost">Cancel</button>
+      </div>`);
+
+    document.querySelector('#me-modal-backdrop h3 + *')?.previousSibling;
+    // Set the giveaway title safely
+    const titleEl = document.querySelector('#me-modal-backdrop p strong');
+    if (titleEl) titleEl.textContent = title;
+
+    document.getElementById('entry-save').onclick = async () => {
+      const cid  = document.getElementById('entry-cid').value.trim();
+      const name = document.getElementById('entry-name').value.trim();
+      if (!cid) { toast('CID is required','err'); return; }
+      document.getElementById('entry-save').disabled = true;
+      document.getElementById('entry-save').textContent = 'Adding…';
+      try {
+        await api(`/giveaways/${id}/admin-entry`, 'POST', { cid, name: name || null });
+        document.getElementById('entry-result').innerHTML =
+          `<p style="color:#4ade80;font-size:13px">✓ Entry added for CID ${escHtml(cid)}</p>`;
+        document.getElementById('entry-cid').value  = '';
+        document.getElementById('entry-name').value = '';
+        document.getElementById('entry-save').disabled = false;
+        document.getElementById('entry-save').textContent = 'Add Entry';
+        load();
+      } catch(e) {
+        document.getElementById('entry-result').innerHTML =
+          `<p style="color:#fca5a5;font-size:13px">${escHtml(e.message)}</p>`;
+        document.getElementById('entry-save').disabled = false;
+        document.getElementById('entry-save').textContent = 'Add Entry';
+      }
+    };
+  };
+
+  load();
+};
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LOCAL PREVIEW MODE — in-memory only, BroadcastChannel sync, no DB writes
+// ═══════════════════════════════════════════════════════════════════════════
+
+// In-memory store keyed by panel name
+const LP_STORE = { partners: [], airlines: [], planning: [], hitsquad: [], events: [] };
+let LP_MODE = false;
+let _lpNextId = -1; // Negative IDs so they never clash with real DB rows
+
+// BroadcastChannel: propagate toggle + data changes to all open admin tabs
+const _lpChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('me_lp') : null;
+if (_lpChannel) {
+  _lpChannel.onmessage = ({ data }) => {
+    if (data.type === 'mode')  { LP_MODE = data.value; if (activeTab) loadTab(activeTab); }
+    if (data.type === 'store') { Object.assign(LP_STORE, data.value); if (activeTab) loadTab(activeTab); }
+    if (data.type === 'clear') { Object.keys(LP_STORE).forEach(k => LP_STORE[k] = []); if (activeTab) loadTab(activeTab); }
+  };
+}
+
+function LP_setMode(val) {
+  LP_MODE = val;
+  if (_lpChannel) _lpChannel.postMessage({ type: 'mode', value: val });
+}
+
+function LP_add(section, record) {
+  record._lp = true;
+  record.id  = _lpNextId--;
+  LP_STORE[section] = [...(LP_STORE[section] || []), record];
+  if (_lpChannel) _lpChannel.postMessage({ type: 'store', value: LP_STORE });
+}
+
+function LP_delete(section, id) {
+  LP_STORE[section] = (LP_STORE[section] || []).filter(r => r.id !== id);
+  if (_lpChannel) _lpChannel.postMessage({ type: 'store', value: LP_STORE });
+}
+
+function LP_clearAll() {
+  Object.keys(LP_STORE).forEach(k => LP_STORE[k] = []);
+  if (_lpChannel) _lpChannel.postMessage({ type: 'clear' });
+}
+
+// ── LP inject helpers ─────────────────────────────────────────────────────
+
+// Prepend a "＋ Add Local Preview Record" button to panel-list when LP_MODE is on
+function lpInjectAddBtn(section, fields, labelMap) {
+  if (!LP_MODE) return;
+  const listEl = document.getElementById('panel-list');
+  if (!listEl) return;
+  const btn = document.createElement('button');
+  btn.className = 'me-btn';
+  btn.style.cssText = 'margin-bottom:14px;background:rgba(167,139,250,.15);border-color:#a78bfa;color:#a78bfa;display:inline-flex;align-items:center;gap:6px;font-size:13px';
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">add_circle</span> Add Local Preview Record';
+  btn.onclick = () => {
+    const formFields = fields.map(f => `
+      <div><label class="me-label">${labelMap[f] || f}</label>
+        <input class="me-input" name="${f}" placeholder="${labelMap[f] || f}"/></div>`).join('');
+    openModal(modalForm('Add Local Preview Record', 'lp-form', formFields, 'Add'));
+    document.getElementById('lp-form').onsubmit = async e => {
+      e.preventDefault();
+      const body = Object.fromEntries(new FormData(e.target).entries());
+      body.name = body.name || body.title || '(preview)';
+      LP_add(section, body);
+      closeModal();
+      toast('Local record added — visible in this tab only until refresh', 'ok');
+      loadTab(activeTab);
+    };
+  };
+  listEl.prepend(btn);
+}
+
+// Append LP rows with a purple "LOCAL" pill and a delete button (no API call)
+function lpInjectRows(section, renderFn) {
+  if (!LP_MODE) return;
+  const rows = LP_STORE[section] || [];
+  if (!rows.length) return;
+  const listEl = document.getElementById('panel-list');
+  if (!listEl) return;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = rows.map(r => `
+    <div class="me-row" data-lp-id="${r.id}" style="opacity:.85;border-left:3px solid #a78bfa">
+      ${renderFn(r)}
+      <span class="me-pill" style="background:rgba(167,139,250,.15);color:#a78bfa;font-size:10px">LOCAL</span>
+      <button class="me-btn me-btn--ghost" data-lp-del="${r.id}"
+              style="color:#fca5a5;display:inline-flex;align-items:center;gap:4px;font-size:12px">
+        <span class="material-symbols-outlined" style="font-size:13px">delete</span>
+      </button>
+    </div>`).join('');
+  wrap.querySelectorAll('[data-lp-del]').forEach(btn => {
+    btn.onclick = () => { LP_delete(section, Number(btn.dataset.lpDel)); loadTab(activeTab); };
+  });
+  listEl.appendChild(wrap);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ESCAPE HELPERS (prevent XSS from API data)
+// ═══════════════════════════════════════════════════════════════════════════
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(str) { return escHtml(str); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BOOT — triggered from auth guard once user is verified
+// ═══════════════════════════════════════════════════════════════════════════
+// (loadTab is called inside the async auth guard above)
+
+</script>
+</body></html>
