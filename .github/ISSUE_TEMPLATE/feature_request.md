@@ -1,20 +1,31 @@
----
+# Based on the issue template
 name: Feature request
-about: Suggest an idea for this project
-title: ''
-labels: ''
-assignees: ''
-
----
-
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
-
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
-
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
-
-**Additional context**
-Add any other context or screenshots about the feature request here.
+description: Suggest an idea for this project
+title: "[FEAT] <title>"
+labels: [enhancement]
+body:
+  - type: checkboxes
+    attributes:
+      label: Is this a new feature request?
+      description: Please search to see if a feature request already exists.
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: textarea
+    attributes:
+      label: Wanted change
+      description: Tell us what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reason for change
+      description: Justify your request, why do you want it, what is the benefit.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed code change
+      description: Do you have a potential code change in mind?
+    validations:
+      required: false
