@@ -17,6 +17,28 @@ function pad(n) {
   return String(n).padStart(2, "0");
 }
 
+let wdth = window.screen.width;
+let Font_Size = 4;
+
+if (wdth > 1000){
+  Font_Size = 4;
+  console.log(Font_Size)
+}
+
+else if (wdth > 500 && wdth < 999 ){
+  Font_Size = 3;
+  console.log(Font_Size)
+}
+
+else if (wdth > 200 && wdth < 499 ){
+  Font_Size = 2;
+  console.log(Font_Size)
+}
+
+else{
+  Font_Size = 1;
+  console.log(Font_Size)
+}
 function tick() {
   const target = new Date(UPCOMING_EVENT.start_time).getTime();
   const diff = Math.max(0, target - Date.now());

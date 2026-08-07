@@ -1,6 +1,7 @@
 <script setup>
 import Header from "@/components/Header.vue";
 import DrawIcon from "@/components/CountDownIcon.vue";
+import Footer from "@/components/Footer.vue";
 </script>
 
 <template>
@@ -12,6 +13,7 @@ import DrawIcon from "@/components/CountDownIcon.vue";
     class="banner-image"
   />
   <DrawIcon />
+  <Footer/>
 </template>
 
 <style scoped>
@@ -21,4 +23,5 @@ import DrawIcon from "@/components/CountDownIcon.vue";
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
+
 </style>

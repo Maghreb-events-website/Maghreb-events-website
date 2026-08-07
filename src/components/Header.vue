@@ -25,7 +25,6 @@ function isActive(path) {
     <nav class="relative bg-gray-700">
       <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
         <div class="relative flex h-16 items-center justify-between">
-          <!-- Mobile button -->
           <div class="absolute inset-y-0 left-0 flex items-center sm:hidden">
             <button
               type="button"
@@ -49,7 +48,6 @@ function isActive(path) {
             </button>
           </div>
 
-          <!-- Desktop navigation -->
           <div class="flex flex-1 items-center">
             <div class="hidden sm:block">
               <div class="flex items-center space-x-4">
@@ -66,7 +64,7 @@ function isActive(path) {
                   v-for="link in navLinks"
                   :key="link.path"
                   :to="link.path"
-                  class="rounded-md px-3 py-2 text-sm font-medium"
+                  class="rounded-md px-3 py-2 text-sm "
                   :class="
                     isActive(link.path)
                       ? 'bg-gray-900 text-white'
@@ -108,6 +106,4 @@ function isActive(path) {
 </template>
 
 <style scoped>
-#Image {
-}
 </style>
