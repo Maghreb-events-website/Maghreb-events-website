@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 
 const UPCOMING_EVENT = {
   title: "New Year's in Morocco",
-  start_time: "2026-12-31T22:00:00Z",
+  start_time: "2026-12-30T22:00:00Z",
 };
 
 const days = ref("--");

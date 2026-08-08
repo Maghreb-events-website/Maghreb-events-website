@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
 
 const menuOpen = ref(false);
 const route = useRoute();
+const { user, loginWithVatsim } = useAuth();
 
 const navLinks = [
   { name: "Home", path: "/" },
@@ -13,6 +15,7 @@ const navLinks = [
   { name: "Hitsquad", path: "/Hitsquad/" },
   { name: "Pilot Breifing", path: "/Breifing/" },
   { name: "Giveaway", path: "/Giveaway/" },
+
 ];
 
 function isActive(path) {
@@ -47,10 +50,10 @@ function isActive(path) {
               </svg>
             </button>
           </div>
-
           <div class="flex flex-1 items-center">
-            <div class="hidden sm:block">
-              <div class="flex items-center space-x-4">
+            <div class="hidden sm:block w-full">
+              <div class="flex items-center">
+                <!-- Logo -->
                 <router-link to="/" style="margin-left: -7%; margin-right: 7%">
                   <img
                     src="@/assets/Logo-White.png"
@@ -60,19 +63,36 @@ function isActive(path) {
                   />
                 </router-link>
 
-                <router-link
-                  v-for="link in navLinks"
-                  :key="link.path"
-                  :to="link.path"
-                  class="rounded-md px-3 py-2 text-sm "
-                  :class="
-                    isActive(link.path)
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                  "
+                <!-- Navigation links -->
+                <div class="flex items-center space-x-4">
+                  <router-link
+                    v-for="link in navLinks"
+                    :key="link.path"
+                    :to="link.path"
+                    class="rounded-md px-3 py-2 text-sm"
+                    :class="
+                      isActive(link.path)
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                    "
+                  >
+                    {{ link.name }}
+                  </router-link>
+                </div>
+
+                <!-- Login / account -->
+                <button
+                  v-if="!user"
+                  @click="loginWithVatsim"
+                  class="ml-auto rounded-md text-gray-300 hover:bg-white/5  hover:text-white px-4 py-2 text-sm font-medium"
                 >
-                  {{ link.name }}
-                </router-link>
+                  Login
+                </button>
+                <div v-else class="ml-auto flex items-center gap-3">
+                  <span class="text-sm text-gray-300">
+                    {{ user.fullName || user.cid }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -99,6 +119,20 @@ function isActive(path) {
           >
             {{ link.name }}
           </router-link>
+
+          <button
+            v-if="!user"
+            @click="loginWithVatsim(); menuOpen = false"
+            class="block w-full text-left rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white"
+          >
+            Login
+          </button>
+          <span
+            v-else
+            class="block px-3 py-2 text-sm font-medium text-gray-300"
+          >
+            {{ user.fullName || user.cid }}
+          </span>
         </div>
       </div>
     </nav>

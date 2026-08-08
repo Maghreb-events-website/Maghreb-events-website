@@ -7,6 +7,7 @@ import GiveAway from '../views/GiveAway.vue'
 import Hitsquad from '../views/Hitsquad.vue'
 import Partners from '../views/Partners.vue'
 import Planning from '../views/Planning.vue'
+import Login from '@/views/Login.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -38,6 +39,10 @@ const router = createRouter({
             {
       path: '/planning',
       component: Planning
+    },
+                {
+      path: '/login',
+      component: Login
     }
   ]
 })
