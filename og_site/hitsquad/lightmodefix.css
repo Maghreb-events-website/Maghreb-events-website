@@ -1,0 +1,109 @@
+/* ────────────────────────────────────────────────────────────────────────────
+   Light Mode CSS Fixes for Hardcoded Dark Colors
+    This CSS file contains overrides to fix hardcoded dark colors in the Hitsquad
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Fix table styling in light mode */
+html.light #roster-table-wrap {
+  background-color: var(--me-bg-elev) !important;
+  border-color: var(--me-border) !important;
+}
+
+html.light #roster-table-wrap table thead tr {
+  background-color: var(--me-bg-elev-2) !important;
+  border-color: var(--me-border) !important;
+}
+
+html.light #roster-table-wrap table tbody tr {
+  background-color: var(--me-bg-elev) !important;
+  color: var(--me-fg) !important;
+}
+
+html.light #roster-table-wrap table tbody tr:nth-child(even) {
+  background-color: var(--me-bg-elev-2) !important;
+}
+
+html.light #roster-table-wrap table tbody tr td {
+  color: var(--me-fg) !important;
+  border-color: var(--me-border) !important;
+}
+
+/* Fix all hardcoded inline style backgrounds */
+html.light [style*="background:#171c20"],
+html.light [style*="background: #171c20"] {
+  background-color: var(--me-bg-elev) !important;
+}
+
+html.light [style*="background:#1b2024"],
+html.light [style*="background: #1b2024"] {
+  background-color: var(--me-bg-elev-2) !important;
+}
+
+html.light [style*="background:#1a1c1e"],
+html.light [style*="background: #1a1c1e"] {
+  background-color: var(--me-bg-elev-3) !important;
+}
+
+html.light [style*="background:#0f1418"],
+html.light [style*="background: #0f1418"] {
+  background-color: var(--me-bg) !important;
+}
+
+html.light [style*="background:#0a0f13"],
+html.light [style*="background: #0a0f13"] {
+  background-color: var(--me-bg) !important;
+}
+
+html.light [style*="background:#30353a"],
+html.light [style*="background: #30353a"] {
+  background-color: var(--me-bg-elev-3) !important;
+}
+
+/* Text color fixes for light mode */
+html.light [style*="color:#dee3e9"],
+html.light [style*="color: #dee3e9"] {
+  color: var(--me-fg) !important;
+}
+
+html.light [style*="color:#bec8d2"],
+html.light [style*="color: #bec8d2"] {
+  color: var(--me-fg-muted) !important;
+}
+
+html.light [style*="color:#88929b"],
+html.light [style*="color: #88929b"] {
+  color: var(--me-fg-dim) !important;
+}
+
+html.light [style*="color:#89ceff"],
+html.light [style*="color: #89ceff"] {
+  color: var(--me-primary-soft) !important;
+}
+
+html.light [style*="color:#9dafc4"],
+html.light [style*="color: #9dafc4"] {
+  color: var(--me-fg-dim) !important;
+}
+
+/* Border color fixes */
+html.light [style*="border-bottom:1px solid rgba(62,72,80"] {
+  border-bottom-color: var(--me-border) !important;
+}
+
+html.light [style*="border:1px solid rgba(62,72,80"] {
+  border-color: var(--me-border) !important;
+}
+
+/* Specific fixes for roster page */
+html.light #roster-tbody tr[style*="background:#1b2024"],
+html.light #roster-tbody tr[style*="background:#171c20"] {
+  background-color: inherit;
+}
+
+html.light #roster-tbody tr:nth-child(odd) {
+  background-color: var(--me-bg-elev) !important;
+}
+
+html.light #roster-tbody tr:nth-child(even) {
+  background-color: var(--me-bg-elev-2) !important;
+}

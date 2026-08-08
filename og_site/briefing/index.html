@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pilot Briefing | Maghreb Events</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;700&family=Inter:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/assets/site.css"/>
+</head>
+<body class="me-page bg-surface text-on-surface" data-active-nav="briefing" style="background:var(--me-bg);color:var(--me-fg)">
+<main class="px-6 max-w-6xl mx-auto w-full pt-8 pb-12">
+  <header class="mb-8 flex items-end justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="font-headline font-light text-5xl md:text-6xl tracking-tight">Pilot Briefing</h1>
+      <p id="meta" style="color:var(--me-fg-muted)" class="text-sm mt-2"></p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <select id="brief-picker" class="me-input" style="display:none;min-width:240px"></select>
+      <a id="download-btn" class="me-btn" style="text-decoration:none;display:none" download>
+        <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px">download</span>
+        Download PDF
+      </a>
+    </div>
+  </header>
+
+  <section class="me-card" style="padding:0;overflow:hidden;height:80vh;background:var(--me-bg-elev-2)">
+    <iframe id="pdf-frame" style="width:100%;height:100%;border:0;background:var(--me-bg-elev-2)" title="Pilot Briefing PDF"></iframe>
+    <div id="empty" class="hidden p-12 text-center" style="color:var(--me-fg-muted)">
+      <span class="material-symbols-outlined" style="font-size:48px;color:var(--me-fg-dim)">description</span>
+      <p class="mt-3">No briefing has been published yet.</p>
+    </div>
+  </section>
+</main>
+
+<script src="/assets/site.js"></script>
+<script>
+// ── Hardcoded Pilot Briefings ──────────────────────────────────────────────
+// To add/edit/remove briefings, update the BRIEFINGS array below.
+// Fields: title, url (direct link to PDF), created_at (ISO date string)
+// Leave the array empty to show the "no briefing" message.
+const BRIEFINGS = [
+  {
+    title: "New Year's in Morocco — Pilot Briefing",
+    url: "briefings/example",          // change example with the name of the file you uploaded to the "briefings" folder (WITH .pdf)
+    created_at: "2026-04-01T00:00:00Z"
+  }
+  // Add more briefings here, newest first:
+  // { title: "Previous Event Briefing", url: "https://...", created_at: "2026-03-01T00:00:00Z" }
+];
+
+const frame  = document.getElementById('pdf-frame');
+const meta   = document.getElementById('meta');
+const empty  = document.getElementById('empty');
+const picker = document.getElementById('brief-picker');
+const dl     = document.getElementById('download-btn');
+
+function showBrief(b) {
+  if (!b.url) {
+    frame.remove();
+    empty.classList.remove('hidden');
+    meta.textContent = 'No PDF link configured for this briefing.';
+    return;
+  }
+  frame.src = b.url;
+  meta.textContent = b.title
+    ? `${b.title} — uploaded ${new Date(b.created_at).toLocaleDateString()}`
+    : `Uploaded ${new Date(b.created_at).toLocaleDateString()}`;
+  dl.href = b.url;
+  dl.style.display = 'inline-flex';
+}
+
+if (!BRIEFINGS.length) {
+  frame.remove();
+  empty.classList.remove('hidden');
+  meta.textContent = '';
+} else {
+  showBrief(BRIEFINGS[0]);
+  if (BRIEFINGS.length > 1) {
+    picker.innerHTML = BRIEFINGS.map((b, i) =>
+      `<option value="${i}">${(b.title||'Briefing').replace(/</g,'&lt;')} — ${new Date(b.created_at).toLocaleDateString()}${i===0?' (latest)':''}</option>`
+    ).join('');
+    picker.style.display = 'inline-block';
+    picker.onchange = () => showBrief(BRIEFINGS[+picker.value]);
+  }
+}
+</script>
+</body></html>
